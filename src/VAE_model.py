@@ -20,11 +20,11 @@ from torch.autograd import Variable
 
 class VAE_Vanilla(nn.Module):
     
-    mb_size = 1
+    mb_size = 10
     
-    X_dim = 513*12
+    X_dim = 513
     h_dim = 128
-    Z_dim = 2
+    Z_dim = 6
     
     lr = 1e-3
     
