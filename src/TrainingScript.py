@@ -50,7 +50,7 @@ for epoch in range(runs):
 
 #%%
 # Save model 
-torch.save(VAE.state_dict(), './model_2')
+torch.save(VAE.state_dict(), './model_6_Toy1')
 # Load model
 VAE = VAE_Vanilla()
 VAE.load_state_dict(torch.load('./model_2'))
