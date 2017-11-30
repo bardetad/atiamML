@@ -11,9 +11,10 @@ Keys:
 @author: bavo
 """
 import os
-import librosa
-from scipy import signal
 import numpy as np
+from scipy import signal
+import librosa
+
 
 # Sound input parameters
 folder_path = "/home/bavo/Documents/ATIAM/4_Informatique/MachineLearning_Project/2_VAE_dataset/training/"
@@ -24,8 +25,8 @@ fft = 1024
 hop_length = fft * 3/4
 window_hann = signal.hann(fft)
 
-imgs_stack = np.zeros([513,12])
-labels_stack = np.zeros([20,1])
+imgs_stack = np.zeros([513,1])
+labels_stack = np.zeros([15625,1])
 i = - 1
 # Loop over sound files and create/store spectrogram
 for filename in os.listdir(folder_path):
@@ -33,8 +34,8 @@ for filename in os.listdir(folder_path):
         i = i + 1
         # Parse filename
         sound , _ = filename.split('.')
-        _ , label = sound.split('_')
-        labels_stack[i] = label
+        label = sound.split('_')
+        labels_stack[i] = str(label[1]) + str(label[2]) + str(label[3]) + str(label[4]) + str(label[5]) + str(label[6])
         
         # Compute spectrogram
         y, sr = librosa.load(folder_path + filename, sr=None)
@@ -42,7 +43,7 @@ for filename in os.listdir(folder_path):
         log_D = librosa.power_to_db(D, ref=np.max)
         
         # Store in numpy array
-        imgs_stack = np.dstack((imgs_stack, log_D))
+        imgs_stack = np.dstack((imgs_stack, log_D[:,0][np.newaxis].T))
 
 imgs_stack = np.delete(imgs_stack,0,2)
 toy_dataset_dict = {'images': imgs_stack, 'labels': labels_stack}
