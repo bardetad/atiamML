@@ -33,28 +33,40 @@ fformat = 'WAVE'
 dur = 0.2
 samptype = 0 # 16 bits int
 
-for i in np.arange(0,10,0.5):    
-    for j in np.arange(0,1,0.1):
+for i in np.arange(0,10,0.5)[:5]:    
+    for j in np.arange(0,1,0.1)[:5]:
         freq_ar = []
-        for k in np.arange(1,10,1):
-            # Set sound parameters
-            sound = 'set1_' + str(int(i*2)) + '_' + str(int(j*10)) +  '_' + str(int(k)) + '_' + '.wav'
+        for k in np.arange(1,10,1)[:5]:
             f0 = 70 + float(np.exp(i))
             freq_new =  (2*k + j)*f0
             freq_ar.append(freq_new)
-            
-            # set server parameters
-            s.setSamplingRate(sr)
-            s.setNchnls(chnls)
-            s.boot()
-            s.recordOptions(dur=dur, filename=os.path.join(folder_path + sound),
-                            fileformat=fformat, sampletype=samptype)
-           
-            # Create sound
-            osc = SumOsc(freq=freq_ar).out()
-           
-            # start the render
-            s.start()
-            # cleanup
-            s.recstop() 
-            s.shutdown()
+            for beta in np.arange(0,1,0.1)[:5]:
+                for Q in np.arange(1,10,1)[:5]:
+                    for filter_f in np.arange(1,10,1)[:5]:
+                        # Set sound parameters
+                        sound = 'set1_' + str(int(i*2)) + '_' \
+                            + str(int(j*10)) +  '_' \
+                            + str(int(k)) + '_' \
+                            + str(int(beta*10)) + '_' \
+                            + str(int(Q)) + '_' \
+                            + str(int(filter_f)) + '_' \
+                            + '.wav'
+                        
+                        # set server parameters
+                        s.setSamplingRate(sr)
+                        s.setNchnls(chnls)
+                        s.boot()
+                        s.recordOptions(dur=dur, filename=os.path.join(folder_path + sound),
+                                        fileformat=fformat, sampletype=samptype)
+                       
+                        # Create sound
+                        sin_sig = Sine(freq=freq_ar, mul = 1)*(1-beta)
+                        noise_sig = Noise(1)*(beta)
+                        temp = sin_sig + noise_sig
+                        sig_filtered = Biquad(temp, freq = float(filter_f*sr/(2*10)), q = float(Q), type=2).out()
+                        
+                        # start the render
+                        s.start()
+                        # cleanup
+                        s.recstop() 
+                        s.shutdown()
