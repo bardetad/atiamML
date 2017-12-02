@@ -17,17 +17,18 @@ import librosa
 
 
 # Sound input parameters
-folder_path = "/home/bavo/Documents/ATIAM/4_Informatique/MachineLearning_Project/2_VAE_dataset/training/"
+folder_path = "/home/bavo/Documents/ATIAM/4_Informatique/MachineLearning_Project/2_VAE_dataset/training_2/"
 #sound = 'test_9.wav'
 
 # Spectrogram parameters
-fft = 1024
-hop_length = fft * 3/4
-window_hann = signal.hann(fft)
+fft_size = 2048
+hop_length = fft_size * 3/4
+window_hann = signal.hann(fft_size)
 
-imgs_stack = np.zeros([513,1])
-labels_stack = np.zeros([15625,1])
+imgs_stack = np.zeros([1025,1])
+labels_stack = np.zeros([188889,1])
 i = - 1
+
 # Loop over sound files and create/store spectrogram
 for filename in os.listdir(folder_path):
     if filename.endswith(".wav"):
@@ -35,19 +36,23 @@ for filename in os.listdir(folder_path):
         # Parse filename
         sound , _ = filename.split('.')
         label = sound.split('_')
-        labels_stack[i] = str(label[1]) + str(label[2]) + str(label[3]) + str(label[4]) + str(label[5]) + str(label[6])
+        labels_stack[i] = str(label[1]) + str(label[2]) + str(label[3]) + str(label[4]) + str(label[5])
         
         # Compute spectrogram
         y, sr = librosa.load(folder_path + filename, sr=None)
-        D = librosa.stft(y, fft, hop_length, window = 'hanning', center=True)
-        log_D = librosa.power_to_db(D, ref=np.max)
+        D = np.fft.fft(y,fft_size)[0:fft_size/2+1]
+        log_D = 20*np.log10(np.abs(D)**2)
+#        D = librosa.stft(y, fft, hop_length, window = 'hanning', center=True)
+#        log_D = librosa.power_to_db(D, ref=np.max)
         
         # Store in numpy array
-        imgs_stack = np.dstack((imgs_stack, log_D[:,0][np.newaxis].T))
+#        imgs_stack = np.dstack((imgs_stack, log_D[:,0][np.newaxis].T))
+        imgs_stack = np.dstack((imgs_stack, log_D[:][np.newaxis].T))
 
 imgs_stack = np.delete(imgs_stack,0,2)
 toy_dataset_dict = {'images': imgs_stack, 'labels': labels_stack}
 np.savez(folder_path + 'toy_dataset_1.npz', **toy_dataset_dict)
+
 # Example to load data
 #test1 = np.load(folder_path + 'toy_dataset_1.npz')
 #test2 = test1['images']
