@@ -26,17 +26,21 @@ hop_length = fft_size * 3/4
 window_hann = signal.hann(fft_size)
 
 imgs_stack = np.zeros([1025,1])
-labels_stack = np.zeros([188889,1])
-i = - 1
+labels_stack = np.chararray([188889,5])
+i = 0
 
 # Loop over sound files and create/store spectrogram
 for filename in os.listdir(folder_path):
     if filename.endswith(".wav"):
-        i = i + 1
         # Parse filename
         sound , _ = filename.split('.')
         label = sound.split('_')
-        labels_stack[i] = str(label[1]) + str(label[2]) + str(label[3]) + str(label[4]) + str(label[5])
+        labels_stack[i,0] = str(label[1])
+        labels_stack[i,1] = str(label[2])
+        labels_stack[i,2] = str(label[3])
+        labels_stack[i,3] = str(label[4])
+        labels_stack[i,4] = str(label[5])
+        i = i + 1
         
         # Compute spectrogram
         y, sr = librosa.load(folder_path + filename, sr=None)
@@ -48,6 +52,8 @@ for filename in os.listdir(folder_path):
         # Store in numpy array
 #        imgs_stack = np.dstack((imgs_stack, log_D[:,0][np.newaxis].T))
         imgs_stack = np.dstack((imgs_stack, log_D[:][np.newaxis].T))
+        if i%1000 == 0:
+            print(i)
 
 imgs_stack = np.delete(imgs_stack,0,2)
 toy_dataset_dict = {'images': imgs_stack, 'labels': labels_stack}
