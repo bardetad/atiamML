@@ -46,12 +46,18 @@ class Encoder(nn.Module):
             self.h_layers.append(
                 nn.Linear(self.inDim_h[index_h], self.outDim_h[index_h]))
 
-        #LAST LAYER is made by hand whereas for decoder IT'S NOT
+        # LAST LAYER is made by hand whereas for decoder IT'S NOT
         self.h_mu = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
         self.h_logSigma = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
 
         self.created = True
 
+    def getInfo(self):
+        print('\nEncoder net : ')
+        for idx in range(self.nb_h):
+            print(str(idx) + ' -> ' + str(self.h_layers[idx]))
+        print('mu ->' + str(self.h_mu))
+        print('logSigma ->' + str(self.h_logSigma))
 
 
 # Z -> Decoder -> P(X|Z)
@@ -99,5 +105,7 @@ class Decoder(nn.Module):
 
         self.created = True
 
-
-
+    def getInfo(self):
+        print('\nDecoder net : ')
+        for idx in range(self.nb_h):
+            print(str(idx) + ' -> ' + str(self.h_layers[idx]))
