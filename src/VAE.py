@@ -27,12 +27,14 @@ class VAE(nn.Module):
             return None
 
         # check if NL_types length & layers number are the same
+        self.NL_funcE = NL_types_Enc
+        self. NL_funcD = NL_types_Dec
         # in Encoder
-        if len(NL_types_Enc) != self.encoder.nb_h:
+        if len(self.NL_funcE) != self.encoder.nb_h:
             print "ERROR_VAE: not enough or too many NL functions in encoder"
             return None
         # in Decoder
-        if len(NL_types_Dec) != self.decoder.nb_h:
+        if len(self.NL_funcD) != self.decoder.nb_h:
             print "ERROR_VAE: not enough or too many NL functions in decoder"
             return None
 
@@ -40,7 +42,7 @@ class VAE(nn.Module):
         # in Encoder
         for index_h in range(self.encoder.nb_h):
             try:
-                getattr(F, NL_types_Enc[index_h])
+                getattr(F, self.NL_funcE[index_h])
             except AttributeError:
                 pass
                 print "ERROR_VAE: Wrong encoder NL function name"
@@ -48,7 +50,7 @@ class VAE(nn.Module):
         # in Decoder
         for index_h in range(self.decoder.nb_h):
             try:
-                getattr(F, NL_types_Dec[index_h])
+                getattr(F, self.NL_funcD[index_h])
             except AttributeError:
                 pass
                 print "ERROR_VAE: Wrong encoder NL function name"
@@ -58,12 +60,49 @@ class VAE(nn.Module):
         self.mb_size = 10
         self.beta = 0
 
+        self.z_mu = None
+        self.z_logSigma = None
+        self.z = None
+        self.X_sample = None
+
         self.created = True
 
-    # def forward(self):
+    def forward(self, X):
+        #compute z from X
+        self.z = self.encode(X)
+        #compute X_sample from z
+        self.X_sample = self.decode(self.z)
 
-    # def encode(self, X):
+    def encode(self, X):
+        # first layer takes X in input
+        var_h = getattr(F, self.NL_funcE[0])(self.encoder.h_layers[0](X))
+        # then var_h goes through deeper layers
+        for i in range(self.encoder.nb_h - 1):
+            var_h = getattr(F, self.NL_funcE[
+                            i + 1])(self.encoder.h_layers[i + 1](X))
 
-    # def reparameterize(self, mu, logSigma):
+        # get z's mu and logSigma
+        self.z_mu = self.encoder.h_mu(var_h)
+        self.z_logSigma = self.encoder.h_logSigma(var_h)
 
-    # def Loss(self,X_sample, X, z_mu, z_var):
+        # reparametrization trick
+        return self.reparametrize(self.z_mu, self.z_logSigma)
+
+    def decode(self, z):
+        # first layer takes z in input
+        var_h = getattr(F, self.NL_funcD[0])(self.decoder.h_layers[0](z))
+        # then var_h goes through deeper layers
+        for i in range(self.decoder.nb_h):
+            var_h = getattr(F, self.NL_funcD[i])(self.decoder.h_layers[i](X))
+
+        return var_h
+
+    def reparametrize(self, mu, logSigma):
+        eps = Variable(torch.randn(self.mb_size, self.Z_dim))
+        return mu + torch.exp(logSigma / 2) * eps
+
+        # def KLD_Loss(self,X_sample, X, z_mu, z_logSigma):
+
+        # def Save(self, name):
+
+        # def Load(self, name):

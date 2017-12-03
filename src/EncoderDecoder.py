@@ -47,8 +47,8 @@ class Encoder(nn.Module):
                 nn.Linear(self.inDim_h[index_h], self.outDim_h[index_h]))
 
         #LAST LAYER is made by hand whereas for decoder IT'S NOT
-        self.mu = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
-        self.logSigma = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
+        self.h_mu = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
+        self.h_logSigma = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
 
         self.created = True
 

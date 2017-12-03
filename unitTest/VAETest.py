@@ -5,7 +5,8 @@ sys.path.append('../src')
 
 from VAE import VAE
 
-class TestVAE(unittest.TestCase):
+
+class TestVAECreation(unittest.TestCase):
 
     def test_good_VAE(self):
         X_dim = 513
@@ -14,7 +15,8 @@ class TestVAE(unittest.TestCase):
         IOh_dims_Dec = [Z_dim, 128, X_dim]
         NL_types_Enc = ['relu']
         NL_types_Dec = ['relu', 'sigmoid']
-        model = VAE(X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
+        model = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                    IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertTrue(model.created)
 
     def test_wrong_EncoderStructure(self):
@@ -24,7 +26,8 @@ class TestVAE(unittest.TestCase):
         IOh_dims_Dec = [Z_dim, 128, X_dim]
         NL_types_Enc = ['relu']
         NL_types_Dec = ['relu', 'sigmoid']
-        model = VAE(X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
+        model = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                    IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
     def test_wrong_DecoderStructure(self):
@@ -34,7 +37,8 @@ class TestVAE(unittest.TestCase):
         IOh_dims_Dec = [X_dim]
         NL_types_Enc = ['relu']
         NL_types_Dec = ['relu', 'sigmoid']
-        model = VAE(X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
+        model = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                    IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
     def test_wrong_EncoderNLFunctionsNb(self):
@@ -44,7 +48,8 @@ class TestVAE(unittest.TestCase):
         IOh_dims_Dec = [Z_dim, 128, X_dim]
         NL_types_Enc = ['relu', 'relu']
         NL_types_Dec = ['relu', 'sigmoid']
-        model = VAE(X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
+        model = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                    IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
     def test_wrong_DecoderNLFunctionsNb(self):
@@ -54,7 +59,8 @@ class TestVAE(unittest.TestCase):
         IOh_dims_Dec = [Z_dim, 128, X_dim]
         NL_types_Enc = ['relu']
         NL_types_Dec = ['relu']
-        model = VAE(X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
+        model = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                    IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
     def test_wrong_EncoderNLfunctionsSyntax(self):
@@ -64,7 +70,8 @@ class TestVAE(unittest.TestCase):
         IOh_dims_Dec = [Z_dim, 128, X_dim]
         NL_types_Enc = ['reLu']
         NL_types_Dec = ['relu', 'sigmoid']
-        model = VAE(X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
+        model = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                    IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
     def test_wrong_DecoderNLfunctionsSyntax(self):
@@ -74,9 +81,28 @@ class TestVAE(unittest.TestCase):
         IOh_dims_Dec = [Z_dim, 128, X_dim]
         NL_types_Enc = ['relu']
         NL_types_Dec = ['relu', 'sigmoide']
-        model = VAE(X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
+        model = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                    IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
-suiteEncoder = unittest.TestLoader().loadTestsFromTestCase(TestVAE)
-print "\n\n------------------- VAE Test Suite -------------------\n"
+
+# class TestVAEFunctions(unittest.TestCase):
+
+    # def test_VAE_Forward(self):
+    #     input = Variable(torch.randn(1, 1, 32, 32))
+    #     X_dim = 513
+    #     Z_dim = 6
+    #     IOh_dims_Enc = [X_dim, 128, Z_dim]
+    #     IOh_dims_Dec = [Z_dim, 128, X_dim]
+    #     NL_types_Enc = ['relu']
+    #     NL_types_Dec = ['relu', 'sigmoid']
+    #     vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
+    #                 IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
+    #     self.assertTrue(model.created)
+
+suiteEncoder = unittest.TestLoader().loadTestsFromTestCase(TestVAECreation)
+print "\n\n------------------- VAE Creation Test Suite -------------------\n"
 unittest.TextTestRunner(verbosity=2).run(suiteEncoder)
+# suiteEncoder = unittest.TestLoader().loadTestsFromTestCase(TestVAEFunctions)
+# print "\n\n------------------- VAE functions Test Suite -------------------\n"
+# unittest.TextTestRunner(verbosity=2).run(suiteEncoder)
