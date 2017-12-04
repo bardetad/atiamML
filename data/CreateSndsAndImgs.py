@@ -12,12 +12,13 @@ Script to create toy data-set 1 with six latent space factors
 
 @author: bavo
 """
-from pyo import *
+import pyo
 import numpy as np
 import os
 
 # path to your sound folder
-folder_path = "/home/bavo/Documents/ATIAM/4_Informatique/MachineLearning_Project/2_VAE_dataset/training_2/"
+folder_path = "/home/bavo/Documents/ATIAM/4_Informatique/MachineLearning_Project/2_VAE_dataset/"
+#folder_path = '/media/bavo/1E84369D843676FD/Users/bavov/Documents/ATIAM/4_Informatique/MachineLearning_Project/Datasets/training_2/'
 
 # create it if it does not exist
 if not os.path.isdir(folder_path):
@@ -29,7 +30,7 @@ hop_length = fft_size * 3/4
 
 # Output .npz parameters
 imgs_stack = np.zeros([1025,1])
-labels_stack = np.zeros([188889,5])
+labels_stack = np.zeros([5,121000])
 i = 0
 
 # Server parameters
@@ -37,7 +38,7 @@ sr = 44100
 f0 = 110
 
 # Start server
-s = Server(sr=44100)
+s = pyo.Server(sr=44100)
 
 for j in np.arange(0,1,0.1):
     freq_ar = [f0]
@@ -50,19 +51,19 @@ for j in np.arange(0,1,0.1):
                     # set server parameters
                     s.boot()
                     s.start()
-                    m1 = DataTable(size = 2048)
+                    m1 = pyo.DataTable(size = 2048)
                     
                     # Create sound
-                    sin_sig = Sine(freq=freq_ar, mul = 1)*(1-beta)
-                    noise_sig = Noise(1)*(beta)
+                    sin_sig = pyo.Sine(freq=freq_ar, mul = 1)*(1-beta)
+                    noise_sig = pyo.Noise(1)*(beta)
                     temp = sin_sig + noise_sig
-                    sig_filtered = Biquad(temp, freq = float(filter_f*sr/(2*100)), q = float(Q), type=2)
-#                    
+                    sig_filtered = pyo.Biquad(temp, freq = float(filter_f*sr/(2*100)), q = float(Q), type=2)
+                    
                     # start the render
-                    rec = TablePut(sig_filtered, table = m1).play()
+                    rec = pyo.TablePut(sig_filtered, table = m1).play()
+                    pyo.time.sleep(0.1)
                     samps = m1.getTable()
                     y = np.asarray(samps) 
-                    sig_filtered.out()
                     # cleanup
                     s.shutdown()
                     
@@ -72,11 +73,11 @@ for j in np.arange(0,1,0.1):
                     
                     # Store in numpy array
                     imgs_stack = np.dstack((imgs_stack, log_D[:][np.newaxis].T))
-                    labels_stack[i][0] = int(j*10) 
-                    labels_stack[i][1] = int(k) 
-                    labels_stack[i][2] = int(beta*10) 
-                    labels_stack[i][3] = int(Q) 
-                    labels_stack[i][4] = int(filter_f)
+                    labels_stack[0][i] = int(j*10) 
+                    labels_stack[1][i] = int(k) 
+                    labels_stack[2][i] = int(beta*10) 
+                    labels_stack[3][i] = int(Q) 
+                    labels_stack[4][i] = int(filter_f)
                     i = i + 1
                     
 imgs_stack = np.delete(imgs_stack,0,2)
