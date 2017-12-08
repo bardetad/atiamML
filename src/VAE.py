@@ -9,13 +9,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import optim
 from torch.autograd import Variable
 from EncoderDecoder import Encoder, Decoder
 
 
 class VAE(nn.Module):
 
-    def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size=64, beta=1):
+    def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size=64, beta=1, lr=1e-3):
 
         # superclass init
         super(VAE, self).__init__()
@@ -58,7 +59,7 @@ class VAE(nn.Module):
                 return None
 
         # learning rate
-        self.lr = 1e-3
+        self.lr = lr
         # minibacth size
         self.mb_size = mb_size
         self.beta = beta
@@ -69,6 +70,7 @@ class VAE(nn.Module):
         self.X_sample = None
 
         self.created = True
+        self.trained = None
 
     def forward(self, X):
         if self.created == False:
@@ -122,6 +124,47 @@ class VAE(nn.Module):
         kld /= self.mb_size * self.encoder.dimX
         loss = bce + self.beta * kld
         return loss
+
+    def train(self, train_loader, epochNb):
+
+        # check mb_size
+        if train_loader.batch_size != self.mb_size:
+            print("ERROR: batch sizes of data and vae mismatched")
+            raise
+
+        optimizer = optim.Adam(self.parameters(), self.lr)
+
+        for epoch in range(1, epochNb + 1):
+
+            # self.train()
+            lossValue = 0
+
+            for i, sample_batched in enumerate(train_loader):
+                batch_length = sample_batched['image'].size(
+                    1) * sample_batched['image'].size(0)
+
+                # make sure the size of the batch corresponds to
+                # mbSize*dataSize
+                if (batch_length != self.mb_size * self.encoder.dimX):
+                    print("ERROR: sizes of data and vae input mismatched")
+                    raise
+
+                # convert 'double' tensor to 'float' tensor
+                X = sample_batched['image'].view(
+                    self.mb_size, self.encoder.dimX).float()
+                X = Variable(X)
+                optimizer.zero_grad()
+                self(X)
+                # compute loss between data input and sampled data
+                lossVariable = self.loss(X)
+                lossVariable.backward()
+                lossValue += lossVariable.data[0]
+                optimizer.step()
+
+            print('====> Epoch: {} Average loss: {:.4f}'.format(
+                  epoch, lossValue / len(train_loader.dataset)))
+
+        self.trained = True
 
         # def save(self, name):
 

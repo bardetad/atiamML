@@ -2,10 +2,11 @@ import unittest
 import sys
 # Add the src folder path to the sys.path list
 sys.path.append('../src')
+sys.path.append('../src/dataset')
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import matplotlib.image as mpimg
+from scipy import misc
 import numpy
 import tensorflow
 from tensorflow.examples.tutorials.mnist import input_data
@@ -14,6 +15,7 @@ from torch import optim
 from torch.autograd import Variable
 
 from VAE import VAE
+from ManageDataset import NPZ_Dataset
 
 
 mnist = input_data.read_data_sets('../MNIST_data', one_hot=True)
@@ -120,7 +122,7 @@ class TestVAEFunctions(unittest.TestCase):
         out = vae(X)
         vae.encoder.getInfo()
         vae.decoder.getInfo()
-        self.assertTrue((vae.created) and (
+        self.assertTrue((vae.created == True) and (
             out.size()[1] == X_dim and out.size()[0] == mb_size))
 
     def test_VAE_Learning(self):
@@ -142,7 +144,7 @@ class TestVAEFunctions(unittest.TestCase):
         fig = plt.figure()
         ims = []
 
-        for i in range(150):
+        for i in range(200):
             optimizer.zero_grad()
             out = vae(X)
             loss = vae.loss(X)
@@ -163,54 +165,32 @@ class TestVAEFunctions(unittest.TestCase):
 
         plt.show()
 
-        self.assertTrue((vae.created) and (loss.data[0] < initialLoss))
+        self.assertTrue((vae.created == True) and (loss.data[0] < initialLoss))
 
-    # experimental
-    # def test_VAE_LearningBigger(self):
-    #     mb_size = 1
+    def test_VAE_trainLoop(self):
+        mb_size = 10
+        epoch_nb = 10
+        testDataset = NPZ_Dataset('dummyDataset_100.npz',
+                                  './dummyDataset/', 'Spectrums', 'labels')
+        train_loader = torch.utils.data.DataLoader(
+            testDataset, batch_size=mb_size, shuffle=True)
 
-    #     #create X from X_2D
-    #     X_2D = mpimg.imread('../../../stinkbug.png')
-    #     # X = numpy.reshape(X_2D, (1, 500*375)) / 255
-    #     X = X_2D
+        X_dim = 1024
+        Z_dim = 6
+        IOh_dims_Enc = [X_dim, 100, Z_dim]
+        IOh_dims_Dec = [Z_dim, 100, X_dim]
+        NL_types_Enc = ['relu']
+        NL_types_Dec = ['relu', 'sigmoid']
+        vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
-    #     X = Variable(torch.from_numpy(X))
-    #     X_dim = 500*375
-    #     Z_dim = 20
-    #     IOh_dims_Enc = [X_dim, 40, Z_dim]
-    #     IOh_dims_Dec = [Z_dim, 40, X_dim]
-    #     NL_types_Enc = ['relu']
-    #     NL_types_Dec = ['relu', 'sigmoid']
-    #     vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-    #               IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
+        vae.train(train_loader, epoch_nb)
+        self.assertTrue((vae.created == True) and (vae.trained == True))
 
-    #     optimizer = optim.Adam(vae.parameters(), lr=1e-3)
 
-    #     fig = plt.figure()
-    #     ims = []
-
-    #     for i in range(400):
-    #         optimizer.zero_grad()
-    #         out = vae(X)
-    #         loss = vae.loss(X)
-    #         print("Loss -> " + str(loss.data))
-    #         loss.backward()
-    #         optimizer.step()
-
-    #         #update plot
-    #         gen = out.data.numpy()
-    #         gen_2D = numpy.reshape(gen[0], (375, 500))
-    #         im = plt.imshow(gen_2D, animated=True)
-    #         ims.append([im])
-
-    #     ani = animation.ArtistAnimation(fig, ims, interval=50, blit=True,
-    #                             repeat_delay=1000)
-
-    #     plt.show()
-
-suiteEncoder = unittest.TestLoader().loadTestsFromTestCase(TestVAECreation)
+suiteVAECreation = unittest.TestLoader().loadTestsFromTestCase(TestVAECreation)
 print "\n\n------------------- VAE Creation Test Suite -------------------\n"
-unittest.TextTestRunner(verbosity=2).run(suiteEncoder)
-suiteEncoder = unittest.TestLoader().loadTestsFromTestCase(TestVAEFunctions)
+unittest.TextTestRunner(verbosity=2).run(suiteVAECreation)
+suiteVAEFunctions = unittest.TestLoader().loadTestsFromTestCase(TestVAEFunctions)
 print "\n\n------------------- VAE functions Test Suite -------------------\n"
-unittest.TextTestRunner(verbosity=2).run(suiteEncoder)
+unittest.TextTestRunner(verbosity=2).run(suiteVAEFunctions)
