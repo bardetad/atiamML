@@ -19,7 +19,7 @@ reload(VAE_model)
 
 # Load Model
 VAE_test = VAE_model.VAE_Vanilla()
-VAE_test.load_state_dict(torch.load('model_6_Toy1', map_location={'cuda:0': 'cpu'}))
+VAE_test.load_state_dict(torch.load('model_6_Toy1_MSE', map_location={'cuda:0': 'cpu'}))
 
 # Load data
 toydataset_1 = VAE_model.ToyDataset_1(npz_file='toy_dataset_2b_BVK.npz', 
@@ -31,11 +31,11 @@ sample_dict = dataiter.next()
 X = sample_dict['image']
 X = Variable(X)
 X = X.float()
-loss, X_sample = VAE_test.forward(X)
+loss, X_mu = VAE_test.forward(X)
 
 #%%                              Test 1: compare in- and output
-idx = 90
-image_out = X_sample[idx].data.numpy()
+idx = 0
+image_out = X_mu[idx].data.numpy()
 image_in = X[idx].data.numpy()
 images = [image_in, image_out]
 
@@ -49,19 +49,20 @@ ax2.plot(images[1])
 #%%                             Test 2: analyse z-space (random z)
 z = Variable(torch.randn(VAE_test.mb_size, VAE_test.Z_dim))
 
-samples = VAE_test.P(z).data.numpy()
+X_mu, X_var = VAE_test.P(z)
+X_mu = X_mu.data.numpy()
 
 # Plot
 idx = 0
 fig = plt.figure()
 ax1 = fig.add_subplot(411)
-ax1.plot(samples[idx])
+ax1.plot(X_mu[idx])
 ax2 = fig.add_subplot(412)
-ax2.plot(samples[idx+1])
+ax2.plot(X_mu[idx+1])
 ax2 = fig.add_subplot(413)
-ax2.plot(samples[idx+2])
+ax2.plot(X_mu[idx+2])
 ax2 = fig.add_subplot(414)
-ax2.plot(samples[idx+3])
+ax2.plot(X_mu[idx+3])
 
 #%%                            Test 3: Signal Reconstruction and granular synth
 import pyo
@@ -76,21 +77,23 @@ def griffLim(S): # Griffin-Lim algorithm for signal reconstruction
         p = np.angle(np.fft.fft(x,Nfft))
     return x
 
-samples = X_sample.data.numpy()
+#X_mu = X_mu.data.numpy()
+samples = X_mu
 samples_recon = 10**(samples/20)
 
 sig2 = griffLim(samples_recon[0,:])
 sig2_real = np.real(sig2)
+sig_mul = sig2_real*10
 
 s = pyo.Server(sr=44100, duplex = 0)
 s.boot()
 s.start()
-tab = pyo.DataTable(size=1024, init=sig2_real.tolist())
+tab = pyo.DataTable(size=1024, init=sig_mul.tolist())
 tab.view()
 env = pyo.HannTable()
 pos = pyo.Phasor(1024/44100, 0, 1024)
-#dur = pyo.Noise(.001, .1)
-g = pyo.Granulator(tab, env, [1, 1.001], pos, dur = 0.1, 24, mul=.1).out()
+dur = pyo.Noise(.001, .1)
+g = pyo.Granulator(tab, env, 1, pos, dur, 24, mul=1).out()
 #s.gui(locals())
 
 #%%                           Test 3: analyse z=space (Guassian mesh)
