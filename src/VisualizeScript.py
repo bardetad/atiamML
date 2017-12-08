@@ -19,7 +19,7 @@ reload(VAE_model)
 
 # Load Model
 VAE_test = VAE_model.VAE_Vanilla()
-VAE_test.load_state_dict(torch.load('model_2_Toy1_2', map_location={'cuda:0': 'cpu'}))
+VAE_test.load_state_dict(torch.load('model_6_Toy1', map_location={'cuda:0': 'cpu'}))
 
 # Load data
 toydataset_1 = VAE_model.ToyDataset_1(npz_file='toy_dataset_2b_BVK.npz', 
@@ -63,40 +63,36 @@ ax2.plot(samples[idx+2])
 ax2 = fig.add_subplot(414)
 ax2.plot(samples[idx+3])
 
-#%%                                     Signal Reconstruction
+#%%                            Test 3: Signal Reconstruction and granular synth
+import pyo
 
-def griffLim1(S): # Griffin-Lim algorithm for signal reconstruction
+def griffLim(S): # Griffin-Lim algorithm for signal reconstruction
     Nfft = S.shape[0]
-    S = np.log1p(S) # ln(1 + S)
-    a = np.exp(S) - 1
+    a = S.copy()
     p = 2*np.pi*np.random.random_sample(a.shape) - np.pi # Init random phase
     for i in xrange(250): # Iterate to approximate phase
         S = a*np.exp(1j*p)
         x = np.fft.ifft(S,Nfft)
         p = np.angle(np.fft.fft(x,Nfft))
-    return np.real(x)
+    return x
 
-def griffLim2(S): # Griffin-Lim algorithm for signal reconstruction
-    Nfft = S.shape[0]
-    S = np.log1p(S) # ln(1 + S)
-    a = np.exp(S) - 1
-    p = 2*np.pi*np.random.random_sample(a.shape) - np.pi # Init random phase
-    S0 = np.sqrt(S)
-    for i in xrange(250): # Iterate to approximate phase
-        S = a*np.exp(1j*p)
-        Si = np.linalg.norm(S)
-        x = np.fft.ifft(S0*S/Si,Nfft)
-        p = np.angle(np.fft.fft(x,Nfft))
-    return np.real(x)
-
+samples = X_sample.data.numpy()
 samples_recon = 10**(samples/20)
-#spectrum = np.array([[0], samples_recon[0,:]])
 
-sig1 = griffLim1(samples_recon[0,:])
-sig2 = griffLim2(samples_recon[0,:])
+sig2 = griffLim(samples_recon[0,:])
+sig2_real = np.real(sig2)
 
-D = np.fft.rfft(sig1,2024)
-log_D = 20*np.log10(np.abs(D)**2)
+s = pyo.Server(sr=44100, duplex = 0)
+s.boot()
+s.start()
+tab = pyo.DataTable(size=1024, init=sig2_real.tolist())
+tab.view()
+env = pyo.HannTable()
+pos = pyo.Phasor(1024/44100, 0, 1024)
+#dur = pyo.Noise(.001, .1)
+g = pyo.Granulator(tab, env, [1, 1.001], pos, dur = 0.1, 24, mul=.1).out()
+#s.gui(locals())
+
 #%%                           Test 3: analyse z=space (Guassian mesh)
 from scipy.stats import norm
 
@@ -120,5 +116,49 @@ for i in range(1,100):
     ax = fig.add_subplot(10,10,i)
     ax.plot(samples[i,:])
 fig.show()
-    
+
+#%%                         Visualize (PCA)
+from sklearn.decomposition import PCA as sklearnPCA
+from mpl_toolkits.mplot3d import Axes3D
+
+n_components = 2
+
+# Load data
+toydataset_1 = VAE_model.ToyDataset_1(npz_file='toy_dataset_2b_BVK.npz', 
+                            root_dir='/home/bavo/Documents/ATIAM/4_Informatique/MachineLearning_Project/2_VAE_dataset/')
+trainloader = torch.utils.data.DataLoader(toydataset_1, batch_size=VAE_test.mb_size, shuffle=True, num_workers=4)
+dataiter = iter(trainloader)
+sample_dict = dataiter.next()
+image_in = sample_dict['image']
+label_in = sample_dict['label']
+X = Variable(image_in).float()
+loss, X_sample = VAE_test.forward(X)
+
+data_in = image_in.numpy()
+labels_in = label_in.numpy()
+
+z_mu, z_var = VAE_test.Q(X)
+z_mu = z_mu.data.numpy()
+z_var = z_var.data.numpy()
+
+sklearn_pca = sklearnPCA(n_components)
+PCA_proj = sklearn_pca.fit_transform(z_mu)
+
+fig = plt.figure(figsize=(12, 8))
+for k in range(5):
+    ax = fig.add_subplot(3,2,k+1)
+    for i in range(10):
+        bool_ar = labels_in[:,k] == i
+        color_ar = np.random.random_sample((3,))
+        for j in range(len(PCA_proj[bool_ar,0])):
+            x = PCA_proj[bool_ar, 0][j]
+            y = PCA_proj[bool_ar, 1][j]
+            ax.text(x, y, str(i), bbox=dict(color = color_ar, alpha=0.5), fontsize=12)
+    add_x = np.std(PCA_proj[:,0])/2
+    add_y = np.std(PCA_proj[:,1])/2
+    ax.set_xlim(min(PCA_proj[:,0])-add_x ,max(PCA_proj[:,0])+add_x )
+    ax.set_ylim(min(PCA_proj[:,1])-add_y,max(PCA_proj[:,1])+add_y)
+
+plt.show()
+
     
