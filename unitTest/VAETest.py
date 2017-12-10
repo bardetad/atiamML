@@ -146,8 +146,8 @@ class TestVAEFunctions(unittest.TestCase):
 
         optimizer = optim.Adam(vae.parameters(), lr=1e-3)
         optimizer.zero_grad()
-        out = None
-        out = vae(X)
+        vae(X)
+        out = vae.X_sample
         vae.encoder.getInfo()
         vae.decoder.getInfo()
         self.assertTrue((vae.created == True) and (
@@ -277,7 +277,7 @@ class TestVAEFunctions(unittest.TestCase):
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
         # now try to load another vae
-        vae.load('dummyDataset100_NPZ_Encoder<1024-relu-401-mulogSigma-6>_Decoder<6-relu-399-sigmoid-1024>_mbSize10_lr0dot001_epoch11', datasetDir)
+        vae.load('dummyDataset100Bernoulli_NPZ_Encoder<1024-relu-401-mulogSigma-6>_Decoder<6-relu-399-sigmoid-1024>_mbSize10_lr0dot001_epoch11', datasetDir)
 
         if vae.loaded == True:
             print(vae)
