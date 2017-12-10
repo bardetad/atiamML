@@ -81,6 +81,10 @@ class TestDecoder(unittest.TestCase):
 	    d = Decoder(inputDim, dimValues, outputDim)
 	    self.assertFalse(d.created)
 
+    # def test_gaussianDecoder(self):
+
+    # def test_wrong_gaussianDecoder(self):
+
 suiteEncoder = unittest.TestLoader().loadTestsFromTestCase(TestEncoder)
 print "\n\n------------------- Encoder Test Suite -------------------\n"
 unittest.TextTestRunner(verbosity=2).run(suiteEncoder)

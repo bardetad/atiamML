@@ -46,7 +46,7 @@ class Encoder(nn.Module):
             self.h_layers.append(
                 nn.Linear(self.inDim_h[index_h], self.outDim_h[index_h]))
 
-        # LAST LAYER is made by hand whereas for decoder IT'S NOT
+        # LAST LAYER is made by hand whereas for bernoulli decoder IT'S NOT
         self.h_mu = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
         self.h_logSigma = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
 
@@ -64,9 +64,11 @@ class Encoder(nn.Module):
 # inputDim (int): dimension of Z (input) - e.g. 6
 # dimValues (int*): hidden layers' IO dimensions - e.g. [6 128 513] for a 1 hLayer NN
 # outputDim (int): dimension of approximate X (output) - e.g. 513
+# bernoulli (bool) : if true, decode directly from NN
+# gaussian (bool) : if true, same structure as encoder with a mu and logSigma
 class Decoder(nn.Module):
 
-    def __init__(self, inputDim, dimValues, outputDim):
+    def __init__(self, inputDim, dimValues, outputDim, bernoulli=True, gaussian=False):
 
         # superclass init
         super(Decoder, self).__init__()
@@ -78,9 +80,19 @@ class Decoder(nn.Module):
         # dimension of outputs X
         self.dimX = outputDim
 
+        # decoder type flags
+        self.bernoulli = bernoulli
+        self.gaussian = gaussian
+
         # Decoder NN structure:
         # define HIDDEN layers number
-        self.nb_h = len(dimValues) - 1
+        if self.bernoulli and not self.gaussian:
+            self.nb_h = len(dimValues) - 1
+        elif self.gaussian and not self.bernoulli:
+            self.nb_h = len(dimValues) - 2
+        else:
+            print("ERROR_Decoder: Decoder type unknown")
+            raise
         # check if args match
         if self.nb_h < 1:
             print "ERROR_Decoder: Not enough dimension values"
@@ -102,6 +114,12 @@ class Decoder(nn.Module):
             self.outDim_h.append(dimValues[index_h + 1])
             self.h_layers.append(
                 nn.Linear(self.inDim_h[index_h], self.outDim_h[index_h]))
+
+        if gaussian and not bernoulli:
+            # LAST LAYER is made by hand whereas for gaussian decoder
+            self.h_mu = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimX)
+            self.h_logSigma = nn.Linear(
+                self.outDim_h[self.nb_h - 1], self.dimX)
 
         self.created = True
 

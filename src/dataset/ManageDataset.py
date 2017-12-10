@@ -10,8 +10,10 @@ class NPZ_Dataset(Dataset):
 
     def __init__(self, npz_file, root_dir, dataName='Spectrums', labelName='labels', transform=None):
 
+
+        self.dataset_name = npz_file
         self.root_dir = root_dir
-        self.path = self.root_dir + npz_file
+        self.path = self.root_dir + self.dataset_name
 
         npz_dict = np.load(self.path)
 

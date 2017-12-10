@@ -9,11 +9,7 @@ from ManageDataset import NPZ_Dataset
 
 class TestNPZDataset(unittest.TestCase):
 
-    def testDatasetLength(self):
-        dataset = NPZ_Dataset('dummyDataset_100.npz',
-                              './dummyDataset/', 'Spectrums', 'labels')
-        self.assertTrue(len(dataset) == 100)
-
+    # check loading dataset
     def testDatasetLoad(self):
         dataset = NPZ_Dataset('dummyDataset_100.npz',
                               './dummyDataset/', 'Spectrums', 'labels')
@@ -21,6 +17,12 @@ class TestNPZDataset(unittest.TestCase):
             data = dataset[i]
             print(i, data['image'], data['label'])
         self.assertTrue(dataset != [])
+
+    # check the length of the dataset
+    def testDatasetLength(self):
+        dataset = NPZ_Dataset('dummyDataset_100.npz',
+                              './dummyDataset/', 'Spectrums', 'labels')
+        self.assertTrue(len(dataset) == 100)
 
 
 suiteNPZDataset = unittest.TestLoader().loadTestsFromTestCase(TestNPZDataset)
