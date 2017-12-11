@@ -1,1 +1,5 @@
 data/beta10_n100_phi62.npz
+
+*.wav
+
+*.npz
