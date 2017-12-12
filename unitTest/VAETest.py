@@ -165,9 +165,9 @@ class TestVAEFunctions(unittest.TestCase):
         IOh_dims_Enc = [X_dim, 50, Z_dim]
         IOh_dims_Dec = [Z_dim, 50, X_dim]
         NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu']
+        NL_types_Dec = ['relu', 'sigmoid']
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True)
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=True, gaussian=False)
 
         optimizer = optim.Adam(vae.parameters(), lr=1e-3)
 
@@ -179,7 +179,10 @@ class TestVAEFunctions(unittest.TestCase):
             if vae.decoder.gaussian:
                 vae(X)
                 out = vae.X_mu
-            else:
+            elif vae.decoder.bernoulli:
+                vae(X)
+                out = vae.X_sample
+            else: 
                 raise
             loss = vae.loss(X)
             if i == 0:

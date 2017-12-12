@@ -11,7 +11,7 @@ class TestNPZDataset(unittest.TestCase):
 
     # check loading dataset
     def testDatasetLoad(self):
-        dataset = NPZ_Dataset('dummyDataset_100.npz',
+        dataset = NPZ_Dataset('dummyDataset100Gaussian.npz',
                               './dummyDataset/', 'Spectrums', 'labels')
         for i in range(5):
             data = dataset[i]
@@ -20,7 +20,7 @@ class TestNPZDataset(unittest.TestCase):
 
     # check the length of the dataset
     def testDatasetLength(self):
-        dataset = NPZ_Dataset('dummyDataset_100.npz',
+        dataset = NPZ_Dataset('dummyDataset100Gaussian.npz',
                               './dummyDataset/', 'Spectrums', 'labels')
         self.assertTrue(len(dataset) == 100)
 

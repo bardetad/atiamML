@@ -12,6 +12,7 @@ import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 from torch import optim
 from torch.autograd import Variable
 from EncoderDecoder import Encoder, Decoder
@@ -19,7 +20,7 @@ from EncoderDecoder import Encoder, Decoder
 
 class VAE(nn.Module):
 
-    def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size=64, beta=1, lr=1e-3, bernoulli = True, gaussian = False):
+    def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size=64, beta=1, lr=1e-3, bernoulli=True, gaussian=False):
 
         # superclass init
         super(VAE, self).__init__()
@@ -94,7 +95,6 @@ class VAE(nn.Module):
 
         self.decode(self.z)
 
-
     def encode(self, X):
         # first layer takes X in input
         var_h = getattr(F, self.NL_funcE[0])(self.encoder.h_layers[0](X))
@@ -138,22 +138,23 @@ class VAE(nn.Module):
     def loss(self, X):
         if self.decoder.bernoulli and not self.decoder.gaussian:
             # Bernoulli
-            # recon = F.binary_cross_entropy(
-            #     self.X_sample, X.view(-1, self.encoder.dimX))
-            recon = F.binary_cross_entropy(self.X_sample, X, size_average=False)
+            recon = F.binary_cross_entropy(
+                self.X_sample, X.view(-1, self.encoder.dimX))
+            recon /= self.mb_size * self.encoder.dimX
         elif self.decoder.gaussian and not self.decoder.bernoulli:
             # gaussian
-            recon = F.mse_loss(self.X_mu, X)/(self.mb_size * self.encoder.dimX)
+            # recon = torch.sum(-(1 / 2) * (torch.log(2 * np.pi * torch.exp(self.X_logSigma)) + F.mse_loss(self.X_mu, X)**2 / torch.exp(self.X_logSigma))) /(self.mb_size * self.encoder.dimX)
+            recon = torch.sum(-0.5 * (self.X_logSigma + (self.X_mu - X)**2 /
+                                      (torch.exp(self.X_logSigma)))) / (self.mb_size * self.encoder.dimX)
+            # print (torch.exp(self.X_logSigma))
         else:
             print("ERROR_VAE: VAE type unknown")
             raise
-        # kld = - 0.5 * torch.sum(1 + self.z_logSigma -
-                                # self.z_mu.pow(2) - self.z_logSigma.exp())
-        kld = 0.5 * torch.sum(torch.exp(self.z_logSigma) + self.z_mu**2 - 1. - self.z_logSigma)
+        kld = 0.5 * torch.sum(torch.exp(self.z_logSigma) +
+                              self.z_mu**2 - 1. - self.z_logSigma)
         # Normalise by same number of elements as in reconstruction
         kld /= self.mb_size * self.encoder.dimX
         loss = recon + self.beta * kld
-        # loss /= (self.mb_size * self.encoder.dimX)
         return loss
 
     def train(self, train_loader, epochNb):
@@ -265,7 +266,8 @@ class VAE(nn.Module):
         self.decoder = Decoder(Z_dim, IOh_dims_Dec, X_dim, bernoulli, gaussian)
 
         print(self.retrievParamsFromName(vaeSaveName))
-        # self(Xdim, Zdim, IOhdimsEnc, IOhdimsDec, NLtypesEnc, NLtypesDec, mbsize, beta, lr)
+        # self(Xdim, Zdim, IOhdimsEnc, IOhdimsDec, NLtypesEnc, NLtypesDec,
+        # mbsize, beta, lr)
 
         self.load_state_dict(torch.load(load_path))
         # self.eval()
