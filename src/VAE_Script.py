@@ -11,9 +11,10 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import soundfile as sf
+import sys
 #import matplotlib.gridspec as gridspec
 
-dataset = np.load('../data/beta10_n100_amp24.npz')
+dataset = np.load('../data/beta10_n100_fm24.npz')
 inp = dataset['data']
 lbls = dataset['lbls']
 params = dataset['params']
@@ -21,14 +22,17 @@ params = dataset['params']
 #X_dim = mnist.train.images.shape[1] # Input variable (X) dimensionality
 #? Why does this correspond to shape[1]?
 X_dim = np.size(inp,axis=1)
-Nit = 256
-miniBatchSize = int(0.125*np.size(inp,axis=0))
+Ndata = np.size(inp,axis=0)
+Nit = 16
+miniBatchSize = int(float(Ndata)/Nit)
+Nepoch = int(float(Ndata)/miniBatchSize) + 1
 z_dim = 3 # Latent space dimensionality
 h_dim = X_dim/2 # Hidden layer (h) dimensionality
 learningRate = 0.001
 
 def extractMiniBatch(data,miniBatchSize):
     i = np.random.randint((np.size(data,axis=0)-miniBatchSize))
+    np.random.shuffle(data)
     X = data[i:(i+miniBatchSize)]
     return X
 
@@ -82,56 +86,67 @@ param = [wXh,bXh,whz_mu,bhz_mu,whz_sigma,bhz_sigma,wzh,bzh,
          whXo_mu,bhXo_mu,whXo_sigma,bhXo_sigma]
 solver = torch.optim.Adam(param,lr=learningRate)
 
-for it in xrange(Nit):
-#    X,_ = mnist.train.next_batch(miniBatchSize)
+for epoch in xrange(Nepoch):
     X = extractMiniBatch(inp,miniBatchSize)
     X = torch.autograd.Variable(torch.from_numpy(X))
-    # Forward
-    z_mu,z_sigma = Q(X)
-    z = zParam(z_mu,z_sigma)
-    Xo_mu,Xo_sigma = P(z)
-    # Loss
-#    reconLoss = torch.nn.functional.binary_cross_entropy(
-#            Xout,X) #pytorch  
-    reconLoss = -0.5*X_dim*torch.sum(2*np.pi*Xo_sigma)
-    reconLoss -= torch.sum(torch.sum((X-Xo_mu).pow(2))/((2*Xo_sigma.exp())))
-    reconLoss /= (miniBatchSize*X_dim) # Gaussian distribution log-likelihood
-    # Takes into account the fact that sigma here represents log(sigma^2)
-#    klLoss = 0.5*torch.sum(torch.exp(z_sigma)+(z_mu**2)-1.-z_sigma) # wiseodd
-    klLoss = -0.5*torch.sum(-(z_sigma.exp())-(z_mu.pow(2))+1.+z_sigma)
-    klLoss /= (miniBatchSize*X_dim) # pytorch
-    loss = -reconLoss + klLoss
-    # Backward
-    loss.backward()
-    # Update
-    solver.step()
-    # Clear parameter gradients (manually)
-    for p in param:
-        if p.grad is not None:
-            data = p.grad.data
-            p.grad = torch.autograd.Variable(
-                    data.new().resize_as_(data).zero_())
-    if ((it%int(0.125*Nit)) == 0):
-        print('Loss: '+str(loss.data[0]))
+    for it in xrange(Nit):
+        # Forward
+        z_mu,z_sigma = Q(X)
+        z = zParam(z_mu,z_sigma)
+        Xo_mu,Xo_sigma = P(z)
+        # Loss 
+        reconLoss = -0.5*X_dim*torch.sum(2*np.pi*Xo_sigma)
+        reconLoss -= torch.sum(
+                torch.sum((X-Xo_mu).pow(2))/((2*Xo_sigma.exp())))
+        reconLoss /= (miniBatchSize*X_dim) 
+        # Gaussian distribution log-likelihood
+        # Takes into account the fact that sigma here represents log(sigma^2)
+        klLoss = -0.5*torch.sum(-(z_sigma.exp())-(z_mu.pow(2))+1.+z_sigma)
+        klLoss /= (miniBatchSize*X_dim) # pytorch
+        loss = -reconLoss + klLoss
+        # Backward
+        loss.backward()
+        # Update
+        solver.step()
+        # Clear parameter gradients (manually)
+        for p in param:
+            if p.grad is not None:
+                data = p.grad.data
+                p.grad = torch.autograd.Variable(
+                        data.new().resize_as_(data).zero_())
+        if ((it%int(0.125*Nit)) == 0):
+            print('Epoch '+str(epoch)+'/'+str(
+                    Nepoch)+', iteration '+str(it)+'/'+str(Nit))
+            print('Reconst. loss (Gaussian log-likelihood): '+str(
+                    reconLoss.data[0]))
+            print('K.L. divergence: '+str(klLoss.data[0]))
+            print('Total loss: '+str(loss.data[0]))
+    print('Total epoch '+str(epoch)+'/'+str(
+            Nepoch)+' loss: '+str(loss.data[0]))
 
-print('Final loss: '+str(loss.data[0]))           
+print('Total final loss: '+str(loss.data[0]))           
 print('Finished training, brah!')
 
 #%%
-
-#samples = X.data.numpy()
-#rndm = torch.autograd.Variable(torch.randn(miniBatchSize,z_dim))
-#zSample = (z_sigma*rndm) + z_mu
 zSample = zParam(z_mu,z_sigma)
-samples,_ = P(zSample)
-sample = samples[0].data.numpy()
+zMax = zSample.max(dim=0)[0]
+zMin = zSample.min(dim=0)[0]
+Nex = 4
+zDiag = np.array([
+        np.linspace(zMin[0].data.numpy(),zMax[0].data.numpy(),Nex),
+        np.linspace(zMin[1].data.numpy(),zMax[1].data.numpy(),Nex),
+        np.linspace(zMin[2].data.numpy(),zMax[2].data.numpy(),Nex)])
+z0 = np.ones((3,miniBatchSize,Nex),dtype='float32')*zMin[0].data.numpy()
+z1 = np.ones((3,miniBatchSize,Nex),dtype='float32')*zMin[1].data.numpy()
+z2 = np.ones((3,miniBatchSize,Nex),dtype='float32')*zMin[2].data.numpy()
+z0[0,:,:] = np.tile(zDiag[0,:],miniBatchSize).reshape((miniBatchSize,Nex))
+z1[1,:,:] = np.tile(zDiag[1,:],miniBatchSize).reshape((miniBatchSize,Nex))
+z2[2,:,:] = np.tile(zDiag[2,:],miniBatchSize).reshape((miniBatchSize,Nex))
+z0 = torch.autograd.Variable(torch.from_numpy(z0))
+z1 = torch.autograd.Variable(torch.from_numpy(z1))
+z2 = torch.autograd.Variable(torch.from_numpy(z2))
 
-#def PCA(X,k=2):
-#    X_mu = torch.mean(X,0)
-#    X = X - X_mu.expand_as(X)
-#    U,S,V = torch.svd(X)
-#    return torch.mm(X,torch.t(U[:][:k]))
-
+f = np.linspace(0,11025.,1024) # Frequency vector
 
 def griffLim(S): # Griffin-Lim algorithm for signal reconstruction
     Nfft = S.shape[0]
@@ -143,6 +158,28 @@ def griffLim(S): # Griffin-Lim algorithm for signal reconstruction
         x = np.fft.ifft(S,Nfft)
         p = np.angle(np.fft.fft(x,Nfft))
     return np.real(x)
+
+for i in range(Nex):
+    X,_ = P(z2[:,:,i].transpose(0,1))
+    X = X.mean(dim=0).data.numpy()
+    for k in range(len(X)):
+        if (X[k] < 0.):
+            X[k] = sys.float_info.epsilon
+    plt.plot(f,20*np.log10(X))
+    plt.plot(f,X)
+    plt.ylim((-67,0))
+    plt.show()
+    x = griffLim(X)
+    plt.plot(x)
+    plt.show()
+    filename = '../data/recon_zDiag_'+str(i)+'.wav'
+    sf.write(filename,(x/max(abs(x))),44100) # Save sound
+
+#def PCA(X,k=2):
+#    X_mu = torch.mean(X,0)
+#    X = X - X_mu.expand_as(X)
+#    U,S,V = torch.svd(X)
+#    return torch.mm(X,torch.t(U[:][:k]))
 
 #fig = plt.figure(figsize=(8,8))
 #gs = gridspec.GridSpec(8,8)
@@ -156,11 +193,6 @@ def griffLim(S): # Griffin-Lim algorithm for signal reconstruction
 #    ax.set_aspect('equal')
 #    plt.imshow(sample.reshape(28,28),cmap='Greys_r')
 
-f = np.linspace(0,11025.,1024) # Frequency vector
-plt.plot(f,sample)
-plt.show()
-plt.plot(f,inp[1])
-plt.show()
 #for i,sample in enumerate(samples):
 #    if (i%500 == 0):
 #        plt.plot(f,sample)

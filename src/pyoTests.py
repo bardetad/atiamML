@@ -20,8 +20,8 @@ s.start()
 
 s.amp = 0.1 # Amp gain to -20 dB
 
-a1 = pyo.Sine(440.).out(0) # Plays a sine wave and sends it out on ch1/L (0)
-b1 = pyo.Sine(220.).out(1) # Plays a sine wave and sends it out on ch2/R (1)
+a1 = pyo.Sine(220.).out(0) # Plays a sine wave and sends it out on ch1/L (0)
+b1 = pyo.Sine(440.).out(1) # Plays a sine wave and sends it out on ch2/R (1)
 # Sine(freq,phase)
 # out(chnl)
 

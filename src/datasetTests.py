@@ -16,7 +16,7 @@ delf = fs/N # Discrete frequency step
 Nbeta = int(f1/delf)
 betaVect = np.linspace(0.,f1,Nbeta,endpoint=False) # Inharmonicity factor
 Namp = 48
-ampVect = np.linspace(0.,1.,Namp)
+ampVect = np.linspace(0.,0.5*f1,Namp,endpoint=False)
 nVect = [i+2 for i in xrange(n_max-1)] # Modal indices
 f = np.linspace(0,0.25*fs,N/4) # Frequency vector
 w = np.hanning(N)
@@ -34,25 +34,26 @@ i = 1 # Initialize collector index counter
 
 for amp in ampVect:
     for beta in betaVect:
-        a = np.sin(2*np.pi*f1*t) + amp*np.random.randn(N)
+        a = np.sin(2*np.pi*f1*t)
         for n in nVect:
-            a = a + np.sin(2*np.pi*n*(f1+beta)*t)
+            a = a + ((1./n)*np.sin((2*np.pi*n*(f1+beta)*t) + (amp*np.sin(
+                    2*np.pi*n*(f1+beta)*t))))
             A = abs(np.fft.fft(a*w)) # Amplitude spectrum
             data[i] = A[0:1024] # Store it
             params[i][0] = beta # Store beta parameter value
             params[i][1] = n # Store n parameter value
             params[i][2] = amp
-            if (i%2000 == 0): # Plot some spectra
+            if ((i%int(0.125*(((n_max-1)*Nbeta*Namp)+1))) == 0):
                 plt.plot(f,(data[i]))
                 plt.show()
                 plt.plot(t,(a/max(abs(a))))
                 plt.show()
-#                filename = '../data/beta'+str(int(beta))+'_n'+str(n)+'_amp'
-#                filename += str(int(amp))+str(int(10*(amp-int(amp))))+'.wav'
+#                filename = '../data/synth'+str(i)+'.wav'
 #                sf.write(filename,(a/max(abs(a))),int(fs)) # Save sound
             i += 1 # Update index counter
 
 data = data/data.max() # Normalize
 
 # Save data arrays
-np.savez('../data/beta10_n100_amp48.npz',data=data,lbls=lbls,params=params)
+setname = '../data/beta'+str(Nbeta)+'_n'+str(n_max)+'_fm'+str(Namp)+'.npz'
+np.savez(setname,data=data,lbls=lbls,params=params)
