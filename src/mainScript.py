@@ -35,8 +35,6 @@ parser.add_argument('--dataset-path', type=str, default='../data/dummyDataset100
                     metavar='path', help='datasetName.npz file path (default: "../data/dummyDataset100Gaussian.npz")')
 parser.add_argument('--dataKey', type=str, default='images',
                     metavar='key', help='key for data in .npz dataset (default: "images")')
-parser.add_argument('--labelKey', type=str, default='labels',
-                    metavar='key', help='key for labels in .npz dataset (default: "labels")')
 parser.add_argument('--save-path', type=str, default='../data/dummySave/',
                     metavar='path', help='VAE save path after training (default: "../data/dummySave").')
 
@@ -72,7 +70,7 @@ datasetName = args.dataset_path.split("/")[-1]
 datasetDir = args.dataset_path.replace(datasetName, "")
 saveDir = args.save_path
 testDataset = NPZ_Dataset(datasetName,
-                          datasetDir, args.dataKey, args.labelKey)
+                          datasetDir, args.dataKey)
 train_loader = torch.utils.data.DataLoader(
     testDataset, batch_size=mb_size, shuffle=True)
 

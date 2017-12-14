@@ -8,7 +8,7 @@ import numpy as np
 
 class NPZ_Dataset(Dataset):
 
-    def __init__(self, npz_file, root_dir, dataName='Spectrums', labelName='labels', transform=None):
+    def __init__(self, npz_file, root_dir, dataName='Spectrums', transform=None):
 
 
         self.dataset_name = npz_file
@@ -19,19 +19,14 @@ class NPZ_Dataset(Dataset):
 
         # the data
         self.imgs_stack = npz_dict[dataName]
-        # the infos on data
-        self.labels_stack = npz_dict[labelName]
 
     # to support the indexing such that dataset[i] can be used to get ith
     # sample
     def __getitem__(self, idx):
         image = self.imgs_stack[:, idx]
-        # label = str(self.labels_stack[:,idx]) TODO -> Bavo dataset form
-        label = str(self.labels_stack[idx]) # Alexis dataset form
-        singleData = {'image': image, 'label': label}
+        singleData = {'image': image}
         return singleData
 
     # returns the size of the dataset
     def __len__(self):
-        # return len(self.imgs_stack[0,:]) TODO -> Bavo dataset form
-        return len(self.labels_stack) #Alexis dataset form
+        return len(self.imgs_stack[0,:])

@@ -213,7 +213,7 @@ class TestVAEFunctions(unittest.TestCase):
         datasetName = 'dummyDataset100Bernoulli.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'images', 'labels')
+                                  datasetDir, 'images')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
 
@@ -236,7 +236,7 @@ class TestVAEFunctions(unittest.TestCase):
         datasetName = 'dummyDataset100Bernoulli.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'images', 'labels')
+                                  datasetDir, 'images')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
 
@@ -266,7 +266,7 @@ class TestVAEFunctions(unittest.TestCase):
         datasetName = 'dummyDataset100Bernoulli.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'images', 'labels')
+                                  datasetDir, 'images')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
 
@@ -308,7 +308,7 @@ class TestVAEFunctions(unittest.TestCase):
         datasetDir = './dummyDataset/'
         saveDir = './saveloadTest/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'images', 'labels')
+                                  datasetDir, 'images')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
         # train it for 10 epochs
