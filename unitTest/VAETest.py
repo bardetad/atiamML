@@ -227,7 +227,7 @@ class TestVAEFunctions(unittest.TestCase):
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
-        vae.train(train_loader, epoch_nb)
+        vae.trainVAE(train_loader, epoch_nb)
         self.assertTrue((vae.created == True) and (vae.trained == True))
 
     def test_VAE_saveState(self):
@@ -250,7 +250,7 @@ class TestVAEFunctions(unittest.TestCase):
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
-        vae.train(train_loader, epoch_nb)
+        vae.trainVAE(train_loader, epoch_nb)
         # save it
         if vae.trained == True:
             vae.save(datasetName, datasetDir)
@@ -312,14 +312,14 @@ class TestVAEFunctions(unittest.TestCase):
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
         # train it for 10 epochs
-        vae.train(train_loader, epoch_nb)
+        vae.trainVAE(train_loader, epoch_nb)
         # save it
         savefile = vae.save(datasetName, saveDir)
         # reload the savefile of VAE
         vae.load(savefile, saveDir)
         # continue training
         print(vae)
-        vae.train(train_loader, 30)
+        vae.trainVAE(train_loader, 30)
 
     # def test_VAE_invalidLoad(self):
 

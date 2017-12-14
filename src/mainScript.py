@@ -75,7 +75,8 @@ train_loader = torch.utils.data.DataLoader(
     testDataset, batch_size=mb_size, shuffle=True)
 
 # train it for 10 epochs
-vae.train(train_loader, epoch_nb)
+# vae.trainVAE()
+vae.trainVAE(train_loader, epoch_nb)
 
 # save it
 savefile = vae.save(datasetName, saveDir)

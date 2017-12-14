@@ -178,8 +178,9 @@ class VAE(nn.Module):
         loss = recon + self.beta * kld
         return loss
 
-    def train(self, train_loader, epochNb):
+    def trainVAE(self, train_loader, epochNb):
 
+        self.train()
         # check mb_size
         if train_loader.batch_size != self.mb_size:
             print("ERROR_VAE_train: batch sizes of data and vae mismatched")
