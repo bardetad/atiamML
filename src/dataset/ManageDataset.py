@@ -26,10 +26,12 @@ class NPZ_Dataset(Dataset):
     # sample
     def __getitem__(self, idx):
         image = self.imgs_stack[:, idx]
-        label = str(self.labels_stack[idx])
+        # label = str(self.labels_stack[:,idx]) TODO -> Bavo dataset form
+        label = str(self.labels_stack[idx]) # Alexis dataset form
         singleData = {'image': image, 'label': label}
         return singleData
 
     # returns the size of the dataset
     def __len__(self):
-        return len(self.labels_stack)
+        # return len(self.imgs_stack[0,:]) TODO -> Bavo dataset form
+        return len(self.labels_stack) #Alexis dataset form

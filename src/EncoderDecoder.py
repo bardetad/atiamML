@@ -5,6 +5,8 @@
 
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
+import numpy as np
 
 
 class Encoder(nn.Module):
@@ -36,29 +38,42 @@ class Encoder(nn.Module):
             return None
 
         # store IO dimensions for each layers in a list
-        #& create hidden layers of the NN (private)
+        #& create initialized hidden layers of the NN
         self.inDim_h = []
         self.outDim_h = []
-        self.h_layers = nn.ModuleList()
+
+        self.weights_h = []
+        self.bias_h = []
+        self.weight_mu = None
+        self.bias_mu = None
+        self.weight_logSigma = None
+        self.bias_logSigma = None
+
         for index_h in range(self.nb_h):
             self.inDim_h.append(dimValues[index_h])
             self.outDim_h.append(dimValues[index_h + 1])
-            self.h_layers.append(
-                nn.Linear(self.inDim_h[index_h], self.outDim_h[index_h]))
+            self.weights_h.append(xavier_init(
+                size=[self.inDim_h[index_h], self.outDim_h[index_h]]))
+            self.bias_h.append(Variable(torch.zeros(
+                self.outDim_h[index_h]), requires_grad=True))
 
-        # LAST LAYER is made by hand whereas for bernoulli decoder IT'S NOT
-        self.h_mu = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
-        self.h_logSigma = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimZ)
+        # LAST LAYER is made by hand whereas for bernoulli DECODER IT'S NOT
+        self.weight_mu = xavier_init(
+            size=[self.outDim_h[self.nb_h - 1], self.dimZ])
+        self.bias_mu = Variable(torch.zeros(self.dimZ), requires_grad=True)
+        self.weight_logSigma = xavier_init(
+            size=[self.outDim_h[self.nb_h - 1], self.dimZ])
+        self.bias_logSigma = Variable(
+            torch.zeros(self.dimZ), requires_grad=True)
 
         self.created = True
 
     def getInfo(self):
         print('\nEncoder net : ')
         for idx in range(self.nb_h):
-            print(str(idx) + ' -> ' + str(self.h_layers[idx]))
-        print('mu ->' + str(self.h_mu))
-        print('logSigma ->' + str(self.h_logSigma))
+            print('layer ' + str(idx) + ': size ' + str(self.weights_h[idx].size(0)))
 
+#------------------------------------------------------------------------------
 
 # Z -> Decoder -> P(X|Z)
 # inputDim (int): dimension of Z (input) - e.g. 6
@@ -66,6 +81,8 @@ class Encoder(nn.Module):
 # outputDim (int): dimension of approximate X (output) - e.g. 513
 # bernoulli (bool) : if true, decode directly from NN
 # gaussian (bool) : if true, same structure as encoder with a mu and logSigma
+
+
 class Decoder(nn.Module):
 
     def __init__(self, inputDim, dimValues, outputDim, bernoulli=True, gaussian=False):
@@ -108,22 +125,47 @@ class Decoder(nn.Module):
         #& create hidden layers of the NN (private)
         self.inDim_h = []
         self.outDim_h = []
-        self.h_layers = nn.ModuleList()
+
+        self.weights_h = []
+        self.bias_h = []
+
+        if gaussian and not bernoulli:
+            self.weight_mu = None
+            self.bias_mu = None
+            self.weight_logSigma = None
+            self.bias_logSigma = None
+
         for index_h in range(self.nb_h):
             self.inDim_h.append(dimValues[index_h])
             self.outDim_h.append(dimValues[index_h + 1])
-            self.h_layers.append(
-                nn.Linear(self.inDim_h[index_h], self.outDim_h[index_h]))
+            self.weights_h.append(xavier_init(
+                size=[self.inDim_h[index_h], self.outDim_h[index_h]]))
+            self.bias_h.append(Variable(torch.zeros(
+                self.outDim_h[index_h]), requires_grad=True))
 
         if gaussian and not bernoulli:
             # LAST LAYER is made by hand whereas for gaussian decoder
-            self.h_mu = nn.Linear(self.outDim_h[self.nb_h - 1], self.dimX)
-            self.h_logSigma = nn.Linear(
-                self.outDim_h[self.nb_h - 1], self.dimX)
+            self.weight_mu = xavier_init(
+                size=[self.outDim_h[self.nb_h - 1], self.dimX])
+            self.bias_mu = Variable(torch.zeros(self.dimX), requires_grad=True)
+            self.weight_logSigma = xavier_init(
+                size=[self.outDim_h[self.nb_h - 1], self.dimX])
+            self.bias_logSigma = Variable(
+                torch.zeros(self.dimX), requires_grad=True)
 
         self.created = True
 
     def getInfo(self):
         print('\nDecoder net : ')
         for idx in range(self.nb_h):
-            print(str(idx) + ' -> ' + str(self.h_layers[idx]))
+            print('layer ' + str(idx) + ': size ' + str(self.weights_h[idx].size(0)))
+
+#------------------------------------------------------------------------------
+
+# Xavier init
+
+
+def xavier_init(size):
+    in_dim = size[0]
+    xavier_stddev = 1 / np.sqrt(in_dim / 2.)
+    return Variable(torch.randn(*size) * xavier_stddev, requires_grad=True)

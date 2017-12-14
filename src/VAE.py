@@ -20,7 +20,7 @@ from EncoderDecoder import Encoder, Decoder
 
 class VAE(nn.Module):
 
-    def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size=64, beta=1, lr=1e-3, bernoulli=True, gaussian=False):
+    def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size=64, beta=4, lr=1e-3, bernoulli=True, gaussian=False):
 
         # superclass init
         super(VAE, self).__init__()
@@ -75,6 +75,25 @@ class VAE(nn.Module):
         self.X_mu = None
         self.X_logSigma = None
 
+        self.parameters = []
+        for nb_h in range(self.encoder.nb_h):
+            self.parameters.append(self.encoder.weights_h[nb_h])
+            self.parameters.append(self.encoder.bias_h[nb_h])
+        self.parameters.append(self.encoder.weight_mu)
+        self.parameters.append(self.encoder.bias_mu)
+        self.parameters.append(self.encoder.weight_logSigma)
+        self.parameters.append(self.encoder.bias_logSigma)
+
+        for nb_h in range(self.decoder.nb_h):
+            self.parameters.append(self.decoder.weights_h[nb_h])
+            self.parameters.append(self.decoder.bias_h[nb_h])
+
+        if self.decoder.gaussian and not self.decoder.bernoulli:
+            self.parameters.append(self.decoder.weight_mu)
+            self.parameters.append(self.decoder.bias_mu)
+            self.parameters.append(self.decoder.weight_logSigma)
+            self.parameters.append(self.decoder.bias_logSigma)
+
         # flags on vae creation
         self.created = True
         self.trained = False
@@ -97,40 +116,44 @@ class VAE(nn.Module):
 
     def encode(self, X):
         # first layer takes X in input
-        var_h = getattr(F, self.NL_funcE[0])(self.encoder.h_layers[0](X))
+        var_h = getattr(F, self.NL_funcE[0])(torch.mm(X, self.encoder.weights_h[
+            0]) + self.encoder.bias_h[0].repeat(X.size(0), 1))
         # then var_h goes through deeper layers
         for i in range(self.encoder.nb_h - 1):
             var_h = getattr(F, self.NL_funcE[
-                            i + 1])(self.encoder.h_layers[i + 1](var_h))
+                            i + 1])(torch.mm(var_h, self.encoder.weights_h[i + 1]) + self.encoder.bias_h[i + 1].repeat(var_h.size(0), 1))
 
         # get z's mu and logSigma
-        self.z_mu = self.encoder.h_mu(var_h)
-        self.z_logSigma = self.encoder.h_logSigma(var_h)
+        self.z_mu = torch.mm(var_h, self.encoder.weight_mu) + \
+            self.encoder.bias_mu.repeat(var_h.size(0), 1)
+        self.z_logSigma = torch.mm(var_h, self.encoder.weight_logSigma) + \
+            self.encoder.bias_logSigma.repeat(var_h.size(0), 1)
 
         # reparametrization trick
         return self.reparametrize()
 
     def decode(self, z):
         # first layer takes z in input
-        var_h = getattr(F, self.NL_funcD[0])(self.decoder.h_layers[0](z))
+        var_h = getattr(F, self.NL_funcD[0])(torch.mm(z, self.decoder.weights_h[
+            0]) + self.decoder.bias_h[0].repeat(z.size(0), 1))
         # then var_h goes through deeper layers
         for i in range(self.decoder.nb_h - 1):
-            var_h = getattr(F, self.NL_funcD[i + 1])(
-                self.decoder.h_layers[i + 1](var_h))
+            var_h = getattr(F, self.NL_funcD[
+                            i + 1])(torch.mm(var_h, self.decoder.weights_h[i + 1]) + self.decoder.bias_h[i + 1].repeat(var_h.size(0), 1))
 
         if self.decoder.bernoulli and not self.decoder.gaussian:
             self.X_sample = var_h
         elif self.decoder.gaussian and not self.decoder.bernoulli:
             # get X_sample's mu and logSigma
-            self.X_mu = self.decoder.h_mu(var_h)
-            self.X_logSigma = self.decoder.h_logSigma(var_h)
+            self.X_mu = torch.mm(var_h, self.decoder.weight_mu) + \
+                self.decoder.bias_mu.repeat(var_h.size(0), 1)
+            self.X_logSigma = torch.mm(
+                var_h, self.decoder.weight_logSigma) + self.decoder.bias_logSigma.repeat(var_h.size(0), 1)
         else:
             print("ERROR VAE: wrong decoder type")
             raise
 
     def reparametrize(self):
-        # eps = Variable(torch.randn(self.mb_size, self.encoder.dimZ))
-        # return self.z_mu + torch.exp(self.z_logSigma / 2) * eps
         std = self.z_logSigma.mul(0.5).exp_()
         eps = Variable(std.data.new(std.size()).normal_())
         return eps.mul(std).add_(self.z_mu)
@@ -143,17 +166,15 @@ class VAE(nn.Module):
             recon /= self.mb_size * self.encoder.dimX
         elif self.decoder.gaussian and not self.decoder.bernoulli:
             # gaussian
-            # recon = torch.sum(-(1 / 2) * (torch.log(2 * np.pi * torch.exp(self.X_logSigma)) + F.mse_loss(self.X_mu, X)**2 / torch.exp(self.X_logSigma))) /(self.mb_size * self.encoder.dimX)
-            recon = torch.sum(-0.5 * (self.X_logSigma + (self.X_mu - X)**2 /
-                                      (torch.exp(self.X_logSigma)))) / (self.mb_size * self.encoder.dimX)
-            # print (torch.exp(self.X_logSigma))
+            X_sigma = torch.exp(self.X_logSigma)
+            firstTerm = torch.log(2* np.pi* X_sigma)
+            secondTerm = ((self.X_mu - X )**2)/X_sigma
+            recon = 0.5 * torch.sum(firstTerm + secondTerm)
+            recon /= (self.mb_size* self.encoder.dimX)
         else:
             print("ERROR_VAE: VAE type unknown")
             raise
-        kld = 0.5 * torch.sum(torch.exp(self.z_logSigma) +
-                              self.z_mu**2 - 1. - self.z_logSigma)
-        # Normalise by same number of elements as in reconstruction
-        kld /= self.mb_size * self.encoder.dimX
+        kld = torch.mean(0.5 * torch.sum(torch.exp(self.z_logSigma) + self.z_mu**2 - 1. - self.z_logSigma, 1))
         loss = recon + self.beta * kld
         return loss
 
@@ -164,7 +185,7 @@ class VAE(nn.Module):
             print("ERROR_VAE_train: batch sizes of data and vae mismatched")
             raise
 
-        optimizer = optim.Adam(self.parameters(), self.lr)
+        optimizer = optim.Adam(self.parameters, self.lr)
 
         if epochNb < self.epoch_nb:
             print("ERROR_VAE_train: vae already trained to" +
@@ -173,7 +194,6 @@ class VAE(nn.Module):
             raise
         for epoch in range(self.epoch_nb + 1, epochNb + 1):
 
-            # self.train()
             lossValue = 0
 
             for i, sample_batched in enumerate(train_loader):
@@ -184,23 +204,30 @@ class VAE(nn.Module):
                 # mbSize*dataSize
                 if (batch_length != self.mb_size * self.encoder.dimX):
                     print("ERROR: sizes of data and vae input mismatched")
+                    print("batch_length = " + str(batch_length))
+                    print("vae input length = " + str(self.mb_size * self.encoder.dimX))
                     raise
 
                 # convert 'double' tensor to 'float' tensor
                 X = sample_batched['image'].view(
                     self.mb_size, self.encoder.dimX).float()
                 X = Variable(X)
-                optimizer.zero_grad()
                 self(X)
                 # compute loss between data input and sampled data
                 lossVariable = self.loss(X)
+
                 lossVariable.backward()
                 lossValue += lossVariable.data[0]
+
                 optimizer.step()
 
-                # time.sleep(0.1)
+                # Housekeeping
+                for p in self.parameters:
+                    if p.grad is not None:
+                        data = p.grad.data
+                        p.grad = Variable(data.new().resize_as_(data).zero_())
 
-            print('====> Epoch: {} Average loss: {:.4f}'.format(
+            print('====> Epoch: {} Average loss: {:.8f}'.format(
                   epoch, lossValue / len(train_loader.dataset)))
         if (epoch == epochNb):
             self.trained = True
@@ -262,15 +289,10 @@ class VAE(nn.Module):
         # retrieve VAE structure
         X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, self.NL_funcE, self.NL_funcD, self.mb_size, self.beta, self.lr, self.epoch_nb, bernoulli, gaussian = self.retrievParamsFromName(
             vaeSaveName)
-        self.encoder = Encoder(X_dim, IOh_dims_Enc, Z_dim)
-        self.decoder = Decoder(Z_dim, IOh_dims_Dec, X_dim, bernoulli, gaussian)
 
         print(self.retrievParamsFromName(vaeSaveName))
-        # self(Xdim, Zdim, IOhdimsEnc, IOhdimsDec, NLtypesEnc, NLtypesDec,
-        # mbsize, beta, lr)
 
         self.load_state_dict(torch.load(load_path))
-        # self.eval()
         print('Loaded VAE state from ' + load_path)
         self.loaded = True
         time.sleep(2)

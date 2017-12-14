@@ -31,8 +31,8 @@ class TestVAECreation(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 128, Z_dim]
         IOh_dims_Dec = [Z_dim, 128, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertTrue(model.created)
@@ -42,8 +42,8 @@ class TestVAECreation(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, Z_dim]
         IOh_dims_Dec = [Z_dim, 128, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
@@ -53,8 +53,8 @@ class TestVAECreation(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 128, Z_dim]
         IOh_dims_Dec = [X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
@@ -64,8 +64,8 @@ class TestVAECreation(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 128, Z_dim]
         IOh_dims_Dec = [Z_dim, 128, X_dim]
-        NL_types_Enc = ['relu', 'relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6', 'relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
@@ -75,8 +75,8 @@ class TestVAECreation(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 128, Z_dim]
         IOh_dims_Dec = [Z_dim, 128, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
@@ -87,7 +87,7 @@ class TestVAECreation(unittest.TestCase):
         IOh_dims_Enc = [X_dim, 128, Z_dim]
         IOh_dims_Dec = [Z_dim, 128, X_dim]
         NL_types_Enc = ['reLu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Dec = ['relu6', 'sigmoid']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
@@ -97,8 +97,8 @@ class TestVAECreation(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 128, Z_dim]
         IOh_dims_Dec = [Z_dim, 128, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoide']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoide']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
@@ -108,8 +108,8 @@ class TestVAECreation(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 128, Z_dim]
         IOh_dims_Dec = [Z_dim, 128, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec, bernoulli=False, gaussian=True)
         self.assertTrue(model.created)
@@ -119,8 +119,8 @@ class TestVAECreation(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 128, Z_dim]
         IOh_dims_Dec = [Z_dim, 128, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec, bernoulli=False, gaussian=True)
         self.assertFalse(model.created)
@@ -139,12 +139,12 @@ class TestVAEFunctions(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 400, Z_dim]
         IOh_dims_Dec = [Z_dim, 400, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
-        optimizer = optim.Adam(vae.parameters(), lr=1e-3)
+        optimizer = optim.Adam(vae.parameters, lr=1e-3)
         optimizer.zero_grad()
         vae(X)
         out = vae.X_sample
@@ -164,17 +164,17 @@ class TestVAEFunctions(unittest.TestCase):
         Z_dim = 1
         IOh_dims_Enc = [X_dim, 50, Z_dim]
         IOh_dims_Dec = [Z_dim, 50, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6']
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=True, gaussian=False)
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True)
 
-        optimizer = optim.Adam(vae.parameters(), lr=1e-3)
+        optimizer = optim.Adam(vae.parameters, lr=1e-3)
 
         fig = plt.figure()
         ims = []
 
-        for i in range(200):
+        for i in range(1000):
             optimizer.zero_grad()
             if vae.decoder.gaussian:
                 vae(X)
@@ -187,13 +187,14 @@ class TestVAEFunctions(unittest.TestCase):
             loss = vae.loss(X)
             if i == 0:
                 initialLoss = loss.data[0]
-            print("Loss -> " + str(loss.data[0]))
+            if(i%10 == 0):
+                print("Loss -> " + str(loss.data[0]))
             loss.backward()
             optimizer.step()
 
             # update plot
             gen = out.data.numpy()
-            gen_2D = numpy.reshape(gen[0], (28, 28)) * 255
+            gen_2D = numpy.reshape(gen[0], (28, 28))
             im = plt.imshow(gen_2D, animated=True)
             ims.append([im])
 
@@ -212,7 +213,7 @@ class TestVAEFunctions(unittest.TestCase):
         datasetName = 'dummyDataset100Bernoulli.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'Spectrums', 'labels')
+                                  datasetDir, 'images', 'labels')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
 
@@ -221,8 +222,8 @@ class TestVAEFunctions(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 400, Z_dim]
         IOh_dims_Dec = [Z_dim, 400, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
@@ -235,7 +236,7 @@ class TestVAEFunctions(unittest.TestCase):
         datasetName = 'dummyDataset100Bernoulli.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'Spectrums', 'labels')
+                                  datasetDir, 'images', 'labels')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
 
@@ -244,8 +245,8 @@ class TestVAEFunctions(unittest.TestCase):
         Z_dim = 6
         IOh_dims_Enc = [X_dim, 401, Z_dim]
         IOh_dims_Dec = [Z_dim, 399, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
@@ -265,7 +266,7 @@ class TestVAEFunctions(unittest.TestCase):
         datasetName = 'dummyDataset100Bernoulli.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'Spectrums', 'labels')
+                                  datasetDir, 'images', 'labels')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
 
@@ -274,13 +275,13 @@ class TestVAEFunctions(unittest.TestCase):
         Z_dim = 64
         IOh_dims_Enc = [X_dim, 15, Z_dim]
         IOh_dims_Dec = [Z_dim, 18, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu', 'sigmoid']
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
         # now try to load another vae
-        vae.load('dummyDataset100Bernoulli_NPZ_Encoder<1024-relu-401-mulogSigma-6>_Decoder<6-relu-399-sigmoid-1024>_mbSize10_lr0dot001_epoch11', datasetDir)
+        vae.load('dummyDataset100Bernoulli_NPZ_Encoder<1024-relu6-401-mulogSigma-6>_Decoder<6-relu6-399-sigmoid-1024>_mbSize10_lr0dot001_epoch11', datasetDir)
 
         if vae.loaded == True:
             print(vae)
@@ -288,18 +289,18 @@ class TestVAEFunctions(unittest.TestCase):
         self.assertTrue((vae.created == True) and (vae.loaded == True))
 
     def test_gaussianVAE_trainsaveload(self):
-        mb_size = 100
-        epoch_nb = 5
+        mb_size = 10
+        epoch_nb = 20
         # if exists remove 'saveloadTest' folder
         if os.path.exists('./saveloadTest'):
             shutil.rmtree('./saveloadTest')
         # create a VAE
         X_dim = 1024
         Z_dim = 10
-        IOh_dims_Enc = [X_dim, 200, Z_dim]
-        IOh_dims_Dec = [Z_dim, 200, X_dim]
-        NL_types_Enc = ['relu']
-        NL_types_Dec = ['relu']
+        IOh_dims_Enc = [X_dim, 600, Z_dim]
+        IOh_dims_Dec = [Z_dim, 600, X_dim]
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6']
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True)
         # prepare dataset
@@ -307,7 +308,7 @@ class TestVAEFunctions(unittest.TestCase):
         datasetDir = './dummyDataset/'
         saveDir = './saveloadTest/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'Spectrums', 'labels')
+                                  datasetDir, 'images', 'labels')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
         # train it for 10 epochs
@@ -318,7 +319,7 @@ class TestVAEFunctions(unittest.TestCase):
         vae.load(savefile, saveDir)
         # continue training
         print(vae)
-        vae.train(train_loader, 20)
+        vae.train(train_loader, 30)
 
     # def test_VAE_invalidLoad(self):
 
