@@ -16,7 +16,7 @@ Chemla - Latent representations for real-time synthesis space exploration
 * 'python mainScript.py --encoderIOdims 1024 600 10 --decoderIOdims 10 600 1024 --encoderNL "relu6" --decoderNL "relu6" --dataset-path "../data/dataset.npz" --save-path "../data/savedVAE/" '
 * For a BERNOULLI VAE the equivalent command will be : 
 * 'python mainScript.py --encoderIOdims 1024 600 10 --decoderIOdims 10 600 1024 --encoderNL "relu6" --decoderNL "relu6" "sigmoid" --type "bernoulli" --dataset-path "../data/dataset.npz" --save-path "../data/savedVAE/" '
-######Test: 
+###### Test: 
 * an immediate working VAE training is on "./data/dummyDataset100Gaussian.npz". So try command :
 * 'python mainScript.py --encoderIOdims 1024 600 10 --decoderIOdims 10 600 1024 --encoderNL "relu6" --decoderNL "relu6" '
 * or Bernoulli equivalent :
