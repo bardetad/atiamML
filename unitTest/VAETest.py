@@ -132,7 +132,7 @@ class TestVAEFunctions(unittest.TestCase):
         mb_size = 64
         # test on mnist dataset
         X, _ = mnist.train.next_batch(mb_size)
-        X = Variable(torch.from_numpy(X), volatile=True)
+        X = Variable(torch.from_numpy(X))
 
         # define vae structure
         X_dim = mnist.train.images.shape[1]

@@ -1,11 +1,3 @@
-# VAE = { X -> Encoder-> Z -> Decoder ~> X }
-# X_dim (int): dimension of X (input) - e.g. 513
-# Z_dim (int): dimension of Z (latent) - e.g. 6
-# IOh_dims_Enc (int*): hidden layers' IO encoder dims - e.g. [513 128 6]
-# IOh_dims_Dec (int*): hidden layers' IO decoder dims - e.g. [6 128 513]
-# NL_types_*** (string*): types on nonLinearity for each layer of Encoder/Decoder
-#  e.g. NL_types_Enc = ['relu'] ; NL_types_Dec = ['relu', 'sigmoid']
-
 import os
 import time
 
@@ -15,7 +7,21 @@ import torch.nn.functional as F
 import numpy as np
 from torch import optim
 from torch.autograd import Variable
+
+from torchvision.utils import save_image
+import torch.utils.data
+from torchvision import datasets, transforms
+
 from EncoderDecoder import Encoder, Decoder
+
+#------------------------------------------------------------------------------
+# VAE = { X -> Encoder-> Z -> Decoder ~> X }
+# X_dim (int): dimension of X (input) - e.g. 513
+# Z_dim (int): dimension of Z (latent) - e.g. 6
+# IOh_dims_Enc (int*): hidden layers' IO encoder dims - e.g. [513 128 6]
+# IOh_dims_Dec (int*): hidden layers' IO decoder dims - e.g. [6 128 513]
+# NL_types_*** (string*): types on nonLinearity for each layer of Encoder/Decoder
+#  e.g. NL_types_Enc = ['relu'] ; NL_types_Dec = ['relu', 'sigmoid']
 
 
 class VAE(nn.Module):
@@ -26,8 +32,12 @@ class VAE(nn.Module):
         super(VAE, self).__init__()
         self.created = False
 
-        self.encoder = Encoder(X_dim, IOh_dims_Enc, Z_dim)
-        self.decoder = Decoder(Z_dim, IOh_dims_Dec, X_dim, bernoulli, gaussian)
+        self.IOh_dims_Enc = IOh_dims_Enc
+        self.IOh_dims_Dec = IOh_dims_Dec
+
+        self.encoder = Encoder(X_dim, self.IOh_dims_Enc, Z_dim)
+        self.decoder = Decoder(Z_dim, self.IOh_dims_Dec,
+                               X_dim, bernoulli, gaussian)
         if (self.encoder.created == False or self.decoder.created == False):
             print "ERROR_VAE: Wrong encoder/decoder structure"
             return None
@@ -167,14 +177,15 @@ class VAE(nn.Module):
         elif self.decoder.gaussian and not self.decoder.bernoulli:
             # gaussian
             X_sigma = torch.exp(self.X_logSigma)
-            firstTerm = torch.log(2* np.pi* X_sigma)
-            secondTerm = ((self.X_mu - X )**2)/X_sigma
+            firstTerm = torch.log(2 * np.pi * X_sigma)
+            secondTerm = ((self.X_mu - X)**2) / X_sigma
             recon = 0.5 * torch.sum(firstTerm + secondTerm)
-            recon /= (self.mb_size* self.encoder.dimX)
+            recon /= (self.mb_size * self.encoder.dimX)
         else:
             print("ERROR_VAE: VAE type unknown")
             raise
-        kld = torch.mean(0.5 * torch.sum(torch.exp(self.z_logSigma) + self.z_mu**2 - 1. - self.z_logSigma, 1))
+        kld = torch.mean(0.5 * torch.sum(torch.exp(self.z_logSigma) +
+                                         self.z_mu**2 - 1. - self.z_logSigma, 1))
         loss = recon + self.beta * kld
         return loss
 
@@ -188,9 +199,9 @@ class VAE(nn.Module):
 
         optimizer = optim.Adam(self.parameters, self.lr)
 
-        if epochNb < self.epoch_nb:
-            print("ERROR_VAE_train: vae already trained to" +
-                  str(self.epoch_nb) + "epochs")
+        if epochNb <= self.epoch_nb:
+            print("ERROR_VAE_train: vae already trained to " +
+                  str(self.epoch_nb) + " epochs")
             print("Try a bigger epochs number")
             raise
         for epoch in range(self.epoch_nb + 1, epochNb + 1):
@@ -206,7 +217,8 @@ class VAE(nn.Module):
                 if (batch_length != self.mb_size * self.encoder.dimX):
                     print("ERROR: sizes of data and vae input mismatched")
                     print("batch_length = " + str(batch_length))
-                    print("vae input length = " + str(self.mb_size * self.encoder.dimX))
+                    print("vae input length = " +
+                          str(self.mb_size * self.encoder.dimX))
                     raise
 
                 # convert 'double' tensor to 'float' tensor
@@ -230,130 +242,184 @@ class VAE(nn.Module):
 
             print('====> Epoch: {} Average loss: {:.8f}'.format(
                   epoch, lossValue / len(train_loader.dataset)))
-        if (epoch == epochNb):
-            self.trained = True
-            self.epoch_nb = epoch
-        else:
-            print("ERROR_VAE_train: wrong loop...")
-            raise
+        self.trained = True
+        self.epoch_nb = epochNb
 
-    def save(self, name, save_dir):
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
-
+    def save(self, datasetName, saveDir):
         # transform .npz to avoid dot in name (consider only .npz for now)
-        name = name.replace(".npz", "_NPZ")
+        name = datasetName.replace(".npz", "_NPZ")
         # add infos on vae structure
-        encoderInfo = '_Encoder'
+        encoderInfo = '_E'
         encoderInfo += '<'
         for numLayerE in range(self.encoder.nb_h):
             encoderInfo += str(self.encoder.inDim_h[numLayerE]) + '-'
             encoderInfo += self.NL_funcE[numLayerE] + '-'
         encoderInfo += str(self.encoder.outDim_h[numLayerE]
-                           ) + '-' + 'mulogSigma' + '-'
+                           ) + '-' + 'muSig' + '-'
         encoderInfo += str(self.encoder.dimZ) + '>'
         name += encoderInfo
 
-        decoderInfo = '_Decoder'
+        decoderInfo = '_D'
         decoderInfo += '<'
         for numLayerD in range(self.decoder.nb_h):
             decoderInfo += str(self.decoder.inDim_h[numLayerD]) + '-'
             decoderInfo += self.NL_funcD[numLayerD] + '-'
         if not self.decoder.bernoulli and self.decoder.gaussian:
             decoderInfo += str(self.decoder.outDim_h[numLayerD]
-                               ) + '-' + 'mulogSigma' + '-'
+                               ) + '-' + 'muSig' + '-'
         decoderInfo += str(self.decoder.dimX) + '>'
         name += decoderInfo
 
+        betaInfo = '_beta' + str(self.beta)
+        name += betaInfo
+
         # add infos on training state
-        mbSizeInfo = '_mbSize' + str(self.mb_size)
+        mbSizeInfo = '_mb' + str(self.mb_size)
         name += mbSizeInfo
         lrInfo = '_lr' + str(self.lr).replace(".", "dot")
         name += lrInfo
-        epochInfo = '_epoch' + str(self.epoch_nb)
+        epochInfo = '_ep' + str(self.epoch_nb)
         name += epochInfo
-        save_path = save_dir + name
-        torch.save(self.state_dict(), save_path)
+        # save it directory
+        save_path = saveDir + name
+
+        if not os.path.exists(saveDir):
+            os.mkdir(saveDir)
+
+        torch.save(self, save_path)
         print('Saved VAE state into ' + save_path)
         self.saved = True
         return name
 
-    def load(self, vaeSaveName, load_dir):
-        if not os.path.exists(load_dir):
-            print("ERROR_VAE_Load: " + load_dir + " invalid directory")
-            raise
-        load_path = load_dir + vaeSaveName
-        if not os.path.exists(load_path):
-            print("ERROR_VAE_Load: " + vaeSaveName + " invalid file")
-            raise
+    def getParams(self):
+        listParams = []
+        listParams.append(self.encoder.dimX)
+        listParams.append(self.decoder.dimZ)
+        listParams.append(self.IOh_dims_Enc)
+        listParams.append(self.IOh_dims_Dec)
+        listParams.append(self.NL_funcE)
+        listParams.append(self.NL_funcD)
+        listParams.append(self.mb_size)
+        listParams.append(self.beta)
+        listParams.append(self.lr)
+        listParams.append(self.epoch_nb)
+        listParams.append(self.decoder.bernoulli)
+        listParams.append(self.decoder.gaussian)
 
-        # retrieve VAE structure
-        X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, self.NL_funcE, self.NL_funcD, self.mb_size, self.beta, self.lr, self.epoch_nb, bernoulli, gaussian = self.retrievParamsFromName(
-            vaeSaveName)
+        return listParams
 
-        print(self.retrievParamsFromName(vaeSaveName))
+    def generate(self, frameNb, saveDir):
+        self.eval()
+        tensorParamValues = torch.FloatTensor(
+            frameNb, self.decoder.dimZ).zero_()
+        for i in range(frameNb):
+            # ramp between 0 and 1 for all z dimensions (not enough...)
+            tensorParamValues[i][:] = float(i * 20) / float(frameNb) - 10
 
-        self.load_state_dict(torch.load(load_path))
-        print('Loaded VAE state from ' + load_path)
-        self.loaded = True
-        time.sleep(2)
+        sample = Variable(tensorParamValues)
+        self.decode(sample)
+        if self.decoder.bernoulli and not self.decoder.gaussian:
+            image = self.X_sample.cpu()
+        elif self.decoder.gaussian and not self.decoder.bernoulli:
+            image = self.X_mu.cpu()
+        save_image(image.data.view(frameNb, self.decoder.dimX),
+                   saveDir + 'z0LinearRamp.png')
 
-    def retrievParamsFromName(self, vaeSaveName):
-        # e.g.vaeSaveName =
-        # 'dummyDataset100_NPZ_Encoder<1024-relu-401-mulogSigma-6>_Decoder<6-relu-399-sigmoid-1024>_mbSize10_lr0dot001_epoch11'
-        s_split = vaeSaveName.split("_")
-        datasetName_s = s_split[0]
-        datasetType_s = s_split[1]
-        encoderNet_s = s_split[2]
-        decoderNet_s = s_split[3]
-        mbSize_s = s_split[4]
-        lr_s = s_split[5]
-        epoch_s = s_split[6]
 
-        # retrieve encoder net dimensions and
-        IOh_dims_Enc = []
-        NL_types_Enc = []
-        # remove labels, only keep values
-        encoderNet_s = encoderNet_s.replace(
-            "Encoder", "").replace("<", "").replace(">", "")
-        encoderNet_tab = encoderNet_s.split("-")
-        for i in range(len(encoderNet_tab)):
+def loadVAE(vaeSaveName, load_dir):
+    if not os.path.exists(load_dir):
+        print("ERROR_VAE_Load: " + load_dir + " invalid directory")
+        raise
+    savefile_path = load_dir + vaeSaveName
+    if not os.path.exists(savefile_path):
+        print("ERROR_VAE_Load: " + vaeSaveName + " invalid file")
+        raise
+    vae = torch.load(savefile_path)
+
+    # check if vae and vaeSameName match
+    paramsFromFilename = getParamsFromName(vaeSaveName)
+    paramsFromVAE = vae.getParams()
+    if paramsFromFilename != paramsFromVAE:
+        print("ERROR_LOAD: vae loaded and fileName mismatched")
+        raise
+    else:
+        vae.loaded = True
+        return vae
+
+#------------------------------------------------------------------------------
+
+
+def getParamsFromName(vaeSaveName):
+    # e.g.vaeSaveName =
+    # 'dummyDataset100_NPZ_E<1024-relu-401-muSig-6>_D<6-relu-399-sigmoid-1024>_beta4_mb10_lr0dot001_ep11'
+    s_split = vaeSaveName.split("_")
+    datasetName_s = s_split[0]
+    datasetType_s = s_split[1]
+    encoderNet_s = s_split[2]
+    decoderNet_s = s_split[3]
+    beta_s = s_split[4]
+    mbSize_s = s_split[5]
+    lr_s = s_split[6]
+    epoch_s = s_split[7]
+
+    # retrieve encoder net dimensions and
+    IOh_dims_Enc = []
+    NL_types_Enc = []
+    # remove labels, only keep values
+    encoderNet_s = encoderNet_s.replace(
+        "E", "").replace("<", "").replace(">", "")
+    encoderNet_tab = encoderNet_s.split("-")
+    for i in range(len(encoderNet_tab)):
             # send heaven index val in IOh_dims_Enc
-            if i % 2 == 0:
-                IOh_dims_Enc.append(int(encoderNet_tab[i]))
-            # send odd index val in NL_types_Enc
-            else:
-                NL_types_Enc.append(encoderNet_tab[i])
-        NL_types_Enc.remove('mulogSigma')
-
-        # retrieve decoder net dimensions and
-        IOh_dims_Dec = []
-        NL_types_Dec = []
-        # remove labels, only keep values
-        decoderNet_s = decoderNet_s.replace(
-            "Decoder", "").replace("<", "").replace(">", "")
-        decoderNet_tab = decoderNet_s.split("-")
-        for i in range(len(decoderNet_tab)):
-            # send heaven index val in IOh_dims_Dec
-            if i % 2 == 0:
-                IOh_dims_Dec.append(int(decoderNet_tab[i]))
-            # send odd index val in NL_types_Dec
-            else:
-                NL_types_Dec.append(decoderNet_tab[i])
-        # check if the decoder is gaussian or bernoulli
-        if NL_types_Dec[-1] == 'mulogSigma':
-            NL_types_Dec.remove('mulogSigma')
-            gaussian = True
-            bernoulli = False
+        if i % 2 == 0:
+            IOh_dims_Enc.append(int(encoderNet_tab[i]))
+        # send odd index val in NL_types_Enc
         else:
-            bernoulli = True
-            gaussian = False
+            NL_types_Enc.append(encoderNet_tab[i])
+    NL_types_Enc.remove('muSig')
 
-        X_dim = IOh_dims_Enc[0]
-        Z_dim = IOh_dims_Dec[0]
-        mb_size = int(mbSize_s.replace("mbSize", ""))
-        beta = 1
-        lr = float(lr_s.replace("lr", "").replace("dot", "."))
-        epoch_nb = int(epoch_s.replace("epoch", ""))
+    # retrieve decoder net dimensions and
+    IOh_dims_Dec = []
+    NL_types_Dec = []
+    # remove labels, only keep values
+    decoderNet_s = decoderNet_s.replace(
+        "D", "").replace("<", "").replace(">", "")
+    decoderNet_tab = decoderNet_s.split("-")
+    for i in range(len(decoderNet_tab)):
+        # send heaven index val in IOh_dims_Dec
+        if i % 2 == 0:
+            IOh_dims_Dec.append(int(decoderNet_tab[i]))
+        # send odd index val in NL_types_Dec
+        else:
+            NL_types_Dec.append(decoderNet_tab[i])
+    # check if the decoder is gaussian or bernoulli
+    if NL_types_Dec[-1] == 'muSig':
+        NL_types_Dec.remove('muSig')
+        gaussian = True
+        bernoulli = False
+    else:
+        bernoulli = True
+        gaussian = False
 
-        return X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, beta, lr, epoch_nb, bernoulli, gaussian
+    X_dim = IOh_dims_Enc[0]
+    Z_dim = IOh_dims_Dec[0]
+    beta = int(beta_s.replace("beta", ""))
+    mb_size = int(mbSize_s.replace("mb", ""))
+    lr = float(lr_s.replace("lr", "").replace("dot", "."))
+    epoch_nb = int(epoch_s.replace("ep", ""))
+
+    listParams = []
+    listParams.append(X_dim)
+    listParams.append(Z_dim)
+    listParams.append(IOh_dims_Enc)
+    listParams.append(IOh_dims_Dec)
+    listParams.append(NL_types_Enc)
+    listParams.append(NL_types_Dec)
+    listParams.append(mb_size)
+    listParams.append(beta)
+    listParams.append(lr)
+    listParams.append(epoch_nb)
+    listParams.append(bernoulli)
+    listParams.append(gaussian)
+
+    return listParams
