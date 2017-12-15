@@ -18,6 +18,7 @@ from torch.autograd import Variable
 from torchvision import datasets, transforms
 
 from VAE import VAE
+from VAE import loadVAE
 from ManageDataset import NPZ_Dataset
 
 
@@ -150,10 +151,10 @@ class TestVAEFunctions(unittest.TestCase):
         out = vae.X_sample
         vae.encoder.getInfo()
         vae.decoder.getInfo()
-        self.assertTrue((vae.created == True) and (
+        self.assertTrue(vae.created and (
             out.size()[1] == X_dim and out.size()[0] == mb_size))
 
-    def test_gaussianVAE_Learning(self):
+    def test_bernoulliVAE_Learning(self):
         mb_size = 1
         # test on mnist dataset
         X, _ = mnist.train.next_batch(mb_size)
@@ -165,16 +166,16 @@ class TestVAEFunctions(unittest.TestCase):
         IOh_dims_Enc = [X_dim, 50, Z_dim]
         IOh_dims_Dec = [Z_dim, 50, X_dim]
         NL_types_Enc = ['relu6']
-        NL_types_Dec = ['relu6']
+        NL_types_Dec = ['relu6', 'sigmoid']
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True)
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=True, gaussian=False)
 
         optimizer = optim.Adam(vae.parameters, lr=1e-3)
 
         fig = plt.figure()
         ims = []
 
-        for i in range(1000):
+        for i in range(100):
             optimizer.zero_grad()
             if vae.decoder.gaussian:
                 vae(X)
@@ -203,14 +204,64 @@ class TestVAEFunctions(unittest.TestCase):
 
         plt.show()
 
-        self.assertTrue((vae.created == True) and (loss.data[0] < initialLoss))
+    def test_gaussianVAE_Learning(self):
+        mb_size = 1
+        # test on mnist dataset
+        X, _ = mnist.train.next_batch(mb_size)
+
+        # define vae structure
+        X = Variable(torch.from_numpy(X))
+        X_dim = mnist.train.images.shape[1]
+        Z_dim = 1
+        IOh_dims_Enc = [X_dim, 50, Z_dim]
+        IOh_dims_Dec = [Z_dim, 50, X_dim]
+        NL_types_Enc = ['relu6']
+        NL_types_Dec = ['relu6']
+        vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True)
+
+        optimizer = optim.Adam(vae.parameters, lr=1e-3)
+
+        fig = plt.figure()
+        ims = []
+
+        for i in range(100):
+            optimizer.zero_grad()
+            if vae.decoder.gaussian:
+                vae(X)
+                out = vae.X_mu
+            elif vae.decoder.bernoulli:
+                vae(X)
+                out = vae.X_sample
+            else: 
+                raise
+            loss = vae.loss(X)
+            if i == 0:
+                initialLoss = loss.data[0]
+            if(i%10 == 0):
+                print("Loss -> " + str(loss.data[0]))
+            loss.backward()
+            optimizer.step()
+
+            # update plot
+            gen = out.data.numpy()
+            gen_2D = numpy.reshape(gen[0], (28, 28))
+            im = plt.imshow(gen_2D, animated=True)
+            ims.append([im])
+
+        ani = animation.ArtistAnimation(fig, ims, interval=50, blit=True,
+                                        repeat_delay=1000)
+
+        plt.show()
+
+        self.assertTrue(vae.created and (loss.data[0] < 100))
 
     def test_VAE_trainLoop(self):
         mb_size = 10
         epoch_nb = 10
 
         # define dataset
-        datasetName = 'dummyDataset100Bernoulli.npz'
+        datasetName = 'dummyDataset100.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
                                   datasetDir, 'images')
@@ -228,12 +279,12 @@ class TestVAEFunctions(unittest.TestCase):
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
 
         vae.trainVAE(train_loader, epoch_nb)
-        self.assertTrue((vae.created == True) and (vae.trained == True))
+        self.assertTrue(vae.created and vae.trained)
 
     def test_VAE_saveState(self):
         mb_size = 10
         epoch_nb = 11
-        datasetName = 'dummyDataset100Bernoulli.npz'
+        datasetName = 'dummyDataset100.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
                                   datasetDir, 'images')
@@ -252,45 +303,15 @@ class TestVAEFunctions(unittest.TestCase):
 
         vae.trainVAE(train_loader, epoch_nb)
         # save it
-        if vae.trained == True:
+        if vae.trained:
             vae.save(datasetName, datasetDir)
 
-        self.assertTrue((vae.created == True) and (
-            vae.trained == True) and (vae.saved == True))
-
-    def test_VAE_loadState(self):
-        # try to retrieve all infos on vae from name file
-
-        mb_size = 10
-        epoch_nb = 11
-        datasetName = 'dummyDataset100Bernoulli.npz'
-        datasetDir = './dummyDataset/'
-        testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'images')
-        train_loader = torch.utils.data.DataLoader(
-            testDataset, batch_size=mb_size, shuffle=True)
-
-        # create random vae structure
-        X_dim = 10
-        Z_dim = 64
-        IOh_dims_Enc = [X_dim, 15, Z_dim]
-        IOh_dims_Dec = [Z_dim, 18, X_dim]
-        NL_types_Enc = ['relu6']
-        NL_types_Dec = ['relu6', 'sigmoid']
-        vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size)
-
-        # now try to load another vae
-        vae.load('dummyDataset100Bernoulli_NPZ_Encoder<1024-relu6-401-mulogSigma-6>_Decoder<6-relu6-399-sigmoid-1024>_mbSize10_lr0dot001_epoch11', datasetDir)
-
-        if vae.loaded == True:
-            print(vae)
-
-        self.assertTrue((vae.created == True) and (vae.loaded == True))
+        self.assertTrue(vae.created and 
+            vae.trained and vae.saved)
 
     def test_gaussianVAE_trainsaveload(self):
         mb_size = 10
-        epoch_nb = 20
+        epoch_nb = 5
         # if exists remove 'saveloadTest' folder
         if os.path.exists('./saveloadTest'):
             shutil.rmtree('./saveloadTest')
@@ -304,9 +325,9 @@ class TestVAEFunctions(unittest.TestCase):
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True)
         # prepare dataset
-        datasetName = 'dummyDataset100Gaussian.npz'
+        datasetName = 'dummyDataset100.npz'
         datasetDir = './dummyDataset/'
-        saveDir = './saveloadTest/'
+        saveDir = './dummySaveTest/'
         testDataset = NPZ_Dataset(datasetName,
                                   datasetDir, 'images')
         train_loader = torch.utils.data.DataLoader(
@@ -316,10 +337,17 @@ class TestVAEFunctions(unittest.TestCase):
         # save it
         savefile = vae.save(datasetName, saveDir)
         # reload the savefile of VAE
-        vae.load(savefile, saveDir)
+        vae = loadVAE(savefile, saveDir)
         # continue training
-        print(vae)
-        vae.trainVAE(train_loader, 30)
+        vae.trainVAE(train_loader, 10)
+        vae.save(datasetName, datasetDir)
+        self.assertTrue(vae.created and vae.loaded and vae.saved)
+
+    def test_VAE_load(self):
+        #try to load a vae
+        vae = loadVAE('dummyDataset100_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta4_mb10_lr0dot001_ep10',\
+                './dummySaveTest/')
+        self.assertTrue(vae.created and vae.loaded)
 
     # def test_VAE_invalidLoad(self):
 

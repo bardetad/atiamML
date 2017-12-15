@@ -310,8 +310,10 @@ class VAE(nn.Module):
 
     def generate(self, frameNb, saveDir):
         self.eval()
+        # tensorParamValues = torch.FloatTensor(
+        #     frameNb, self.decoder.dimZ).zero_()
         tensorParamValues = torch.FloatTensor(
-            frameNb, self.decoder.dimZ).zero_()
+            frameNb, 1).zero_()
         for i in range(frameNb):
             # ramp between 0 and 1 for all z dimensions (not enough...)
             tensorParamValues[i][:] = float(i * 20) / float(frameNb) - 10

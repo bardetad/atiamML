@@ -11,50 +11,53 @@ from VAE import VAE
 from VAE import loadVAE
 from ManageDataset import NPZ_Dataset
 
+# SCRIPT MODES:
+# if "train": train a vae from scratch.
+# if "load": load (from savefile) a vae already trained and visualize outputs
+
 parser = argparse.ArgumentParser(description='generic VAE training and saving')
 
 
-# parser.add_argument('--no-cuda', action='store_true', default=False,
-#                     help='enables CUDA training')
-# parser.add_argument('--seed', type=int, default=1, metavar='S',
-#                     help='random seed (default: 1)')
-
-# script mode:
-# if "train": train a vae from scratch.
-# if "load": load (from savefile) a vae already trained and visualize outputs
-parser.add_argument('--mode', type=str, default='train', metavar='boolean',
-                    help='mode among "train", "load". (default: "train"):\n-"train": train a vae from scratch.\n-"load": load (from savefile) a vae already trained and visualize outputs')
-parser.add_argument('--vae-path', type=str,
-                    default='../data/dummySave/dummyDataset100Gaussian_NPZ_E<1024-relu6-600-muSig-1>_D<1-relu6-600-muSig-1024>_beta4_mb50_lr0dot001_e10')
+parser.add_argument('-mode', type=str, default='train', metavar='boolean',
+                    help='mode among "train", "load". (default: "train"):\
+                    \n "train": train a vae from scratch.\
+                    \n "load": load (from savefile) a vae already trained and visualize outputs')
+parser.add_argument('-vae-path', type=str,
+                    default='../data/dummySave/\
+                    dummyDataset100Gaussian_NPZ_E<1024-relu6-600-muSig-1>\
+                    _D<1-relu6-600-muSig-1024>_beta4_mb50_lr0dot001_e10')
 
 # VAE dimensions
-parser.add_argument('--encoderIOdims', nargs='+', type=int, metavar='int list',
+parser.add_argument('-encoderIOdims', nargs='+', type=int, metavar='int list',
                     help='<Required> IO dimensions of encoder net (example: 1024 600 6)')
-parser.add_argument('--decoderIOdims', nargs='+', type=int, metavar='int list',
+parser.add_argument('-decoderIOdims', nargs='+', type=int, metavar='int list',
                     help='<Required> IO dimensions of decoder net (example: 6 600 1024)')
 
 # VAE Non linear functions
-parser.add_argument('--encoderNL', nargs='+', type=str, metavar='string list',
-                    help='<Required> encoder nonlinear activations (example: "relu6" for 1 layer or "relu6" "sigmoid" for 2 layers)')
-parser.add_argument('--decoderNL', nargs='+', type=str, metavar='string list',
-                    help='<Required> decoder nonlinear activations (example: "relu6" for 1 layer or "relu6" "sigmoid" for 2 layers)')
+parser.add_argument('-encoderNL', nargs='+', type=str, metavar='string list',
+                    help='<Required> encoder nonlinear activations \
+                    (example: "relu6" for 1 layer or "relu6" "sigmoid" for 2 layers)')
+parser.add_argument('-decoderNL', nargs='+', type=str, metavar='string list',
+                    help='<Required> decoder nonlinear activations \
+                    (example: "relu6" for 1 layer or "relu6" "sigmoid" for 2 layers)')
 
 # VAE type
-parser.add_argument('--type', type=str, default='gaussian', metavar='bernoulli/gaussian',
+parser.add_argument('-type', type=str, default='gaussian', metavar='bernoulli/gaussian',
                     help='chose type of vae: either gaussian or bernoulli (default: "gaussian")')
 
 # load Dataset and save VAE state settings
-parser.add_argument('--dataset-path', type=str, default='../data/dummyDataset100Gaussian.npz',
-                    metavar='path', help='datasetName.npz file path (default: "../data/dummyDataset100Gaussian.npz")')
-parser.add_argument('--dataKey', type=str, default='images',
+parser.add_argument('-dataset-path', type=str, default='../data/dummyDataset100.npz',
+                    metavar='path', help='datasetName.npz file path \
+                    (default: "../data/dummyDataset100.npz")')
+parser.add_argument('-dataKey', type=str, default='images',
                     metavar='key', help='key for data in .npz dataset (default: "images")')
-parser.add_argument('--save-path', type=str, default='../data/dummySave/',
+parser.add_argument('-save-path', type=str, default='../data/dummySave/',
                     metavar='path', help='VAE save path after training (default: "../data/dummySave").')
 
 # training settings
-parser.add_argument('--mb-size', type=int, default=10, metavar='N',
+parser.add_argument('-mb-size', type=int, default=10, metavar='N',
                     help='input batch size for training (default: 10)')
-parser.add_argument('--epochs', type=int, default=10, metavar='N',
+parser.add_argument('-epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
 
 
@@ -92,7 +95,7 @@ if mode == "train":
     else:
         print("ERROR script: Chose VAE type -> either bernoulli or gaussian")
 
-    # train it for 10 epochs
+    # train it for N epochs
     vae.trainVAE(train_loader, epoch_nb)
 
     # save it
