@@ -23,7 +23,7 @@ params = dataset['params']
 #? Why does this correspond to shape[1]?
 X_dim = np.size(inp,axis=1)
 Ndata = np.size(inp,axis=0)
-Nit = 16
+Nit = 32
 miniBatchSize = int(float(Ndata)/Nit)
 Nepoch = int(float(Ndata)/miniBatchSize) + 1
 z_dim = 3 # Latent space dimensionality
@@ -96,13 +96,17 @@ for epoch in xrange(Nepoch):
         Xo_mu,Xo_sigma = P(z)
         # Loss 
         reconLoss = -0.5*X_dim*torch.sum(2*np.pi*Xo_sigma)
-        reconLoss -= torch.sum(
-                torch.sum((X-Xo_mu).pow(2))/((2*Xo_sigma.exp())))
+#        reconLoss -= torch.sum(
+#                torch.sum((X-Xo_mu).pow(2))/((2*Xo_sigma.exp())))
+        # Test without second sum
+        reconLoss -= torch.sum(((X-Xo_mu).pow(2))/((2*Xo_sigma.exp())))
         reconLoss /= (miniBatchSize*X_dim) 
         # Gaussian distribution log-likelihood
         # Takes into account the fact that sigma here represents log(sigma^2)
         klLoss = -0.5*torch.sum(-(z_sigma.exp())-(z_mu.pow(2))+1.+z_sigma)
-        klLoss /= (miniBatchSize*X_dim) # pytorch
+        beta = float(it*epoch)/(Nit*Nepoch)
+        klLoss *= beta
+        klLoss /= (miniBatchSize*X_dim)
         loss = -reconLoss + klLoss
         # Backward
         loss.backward()
@@ -136,15 +140,12 @@ zDiag = np.array([
         np.linspace(zMin[0].data.numpy(),zMax[0].data.numpy(),Nex),
         np.linspace(zMin[1].data.numpy(),zMax[1].data.numpy(),Nex),
         np.linspace(zMin[2].data.numpy(),zMax[2].data.numpy(),Nex)])
-z0 = np.ones((3,miniBatchSize,Nex),dtype='float32')*zMin[0].data.numpy()
-z1 = np.ones((3,miniBatchSize,Nex),dtype='float32')*zMin[1].data.numpy()
-z2 = np.ones((3,miniBatchSize,Nex),dtype='float32')*zMin[2].data.numpy()
-z0[0,:,:] = np.tile(zDiag[0,:],miniBatchSize).reshape((miniBatchSize,Nex))
-z1[1,:,:] = np.tile(zDiag[1,:],miniBatchSize).reshape((miniBatchSize,Nex))
-z2[2,:,:] = np.tile(zDiag[2,:],miniBatchSize).reshape((miniBatchSize,Nex))
-z0 = torch.autograd.Variable(torch.from_numpy(z0))
-z1 = torch.autograd.Variable(torch.from_numpy(z1))
-z2 = torch.autograd.Variable(torch.from_numpy(z2))
+
+def latentVar(val,miniBatchSize):
+    dim = val.size
+    z_np = np.tile(val,miniBatchSize).reshape((miniBatchSize,dim))
+    z_t = torch.autograd.Variable(torch.from_numpy(z_np))
+    return z_t
 
 f = np.linspace(0,11025.,1024) # Frequency vector
 
@@ -159,39 +160,41 @@ def griffLim(S): # Griffin-Lim algorithm for signal reconstruction
         p = np.angle(np.fft.fft(x,Nfft))
     return np.real(x)
 
-for i in range(Nex):
-    X,_ = P(z2[:,:,i].transpose(0,1))
-    X = X.mean(dim=0).data.numpy()
-    for k in range(len(X)):
-        if (X[k] < 0.):
-            X[k] = sys.float_info.epsilon
-    plt.plot(f,20*np.log10(X))
-    plt.plot(f,X)
-    plt.ylim((-67,0))
-    plt.show()
-    x = griffLim(X)
-    plt.plot(x)
-    plt.show()
-    filename = '../data/recon_zDiag_'+str(i)+'.wav'
-    sf.write(filename,(x/max(abs(x))),44100) # Save sound
+X,_ = P(latentVar(np.array([0.,0.,4.],dtype='float32'),miniBatchSize))
+#X,_ = P(latentVar(zDiag[:,0],miniBatchSize))
+X = X.mean(dim=0).data.numpy()
+for k in range(len(X)):
+    if (X[k] < 0.):
+        X[k] = sys.float_info.epsilon
+plt.plot(f,20*np.log10(X))
+plt.plot(f,X)
+plt.ylim((-67,0))
+plt.show()
+x = griffLim(X)
+plt.plot(x)
+plt.show()
+
+#for i in range(Nex):
+#    X,_ = P(latentVar(zDiag[:,i],miniBatchSize))
+#    X = X.mean(dim=0).data.numpy()
+#    for k in range(len(X)):
+#        if (X[k] < 0.):
+#            X[k] = sys.float_info.epsilon
+#    plt.plot(f,20*np.log10(X))
+#    plt.plot(f,X)
+#    plt.ylim((-67,0))
+#    plt.show()
+#    x = griffLim(X)
+#    plt.plot(x)
+#    plt.show()
+#    filename = '../data/recon_zDiag_'+str(i)+'.wav'
+#    sf.write(filename,(x/max(abs(x))),44100) # Save sound
 
 #def PCA(X,k=2):
 #    X_mu = torch.mean(X,0)
 #    X = X - X_mu.expand_as(X)
 #    U,S,V = torch.svd(X)
 #    return torch.mm(X,torch.t(U[:][:k]))
-
-#fig = plt.figure(figsize=(8,8))
-#gs = gridspec.GridSpec(8,8)
-#gs.update(wspace=0.1,hspace=0.1)
-#
-#for i,sample in enumerate(samples):
-#    ax = plt.subplot(gs[i])
-#    plt.axis('off')
-#    ax.set_xticklabels([])
-#    ax.set_yticklabels([])
-#    ax.set_aspect('equal')
-#    plt.imshow(sample.reshape(28,28),cmap='Greys_r')
 
 #for i,sample in enumerate(samples):
 #    if (i%500 == 0):
@@ -204,18 +207,6 @@ for i in range(Nex):
 #        sf.write(filename,(x/max(abs(x))),11025,) # Save sound
     
 #%%
-
-# Signal reconstruction by Alexis Adoniadis
-
-#sig = 0;
-#t = np.linspace(0,_time,_time*_Fe)
-#
-#for band in range(_Nfft/_factor):
-##Take the mean of the band's frequency
-#fosc = (band+0.5)/len(_spectrum)*_Fe/_factor;
-#sig = sig + np.sin(2*np.pi*fosc*t)*_spectrum[band];
-#
-#return sig/max(abs(sig))
 
 # Griffin-Lim algorithm courtesy of Victor Wetzel by way of Philippe Esling
         
