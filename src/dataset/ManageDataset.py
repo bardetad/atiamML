@@ -22,13 +22,21 @@ class NPZ_Dataset(Dataset):
         npz_dict = np.load(self.path)
 
         # the data
-        self.imgs_stack = npz_dict[dataName]
+        try:
+            self.labels_stack = npz_dict['labels']
+            self.imgs_stack = npz_dict[dataName]
+        except:
+            self.imgs_stack = npz_dict[dataName]
 
     # to support the indexing such that dataset[i] can be used to get ith
     # sample
     def __getitem__(self, idx):
         image = self.imgs_stack[:, idx]
-        singleData = {'image': image}
+        try:
+            label = self.labels_stack[:,idx]
+            singleData = {'image': image, 'label': label}
+        except:
+            singleData = {'image': image}
         return singleData
 
     # returns the size of the dataset
