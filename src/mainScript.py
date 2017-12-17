@@ -59,10 +59,10 @@ parser.add_argument('-mb-size', type=int, default=10, metavar='N',
                     help='input batch size for training (default: 10)')
 parser.add_argument('-epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
-parser.add_argument('-beta', type=float, default=1, metavar='N',
+parser.add_argument('-beta', type=int, default=1, metavar='N',
                     help='beta coefficient for regularization (default: 1)')
-parser.add_argument('-Nwu', type=int, default=50, metavar='N',
-                    help='epochs number for warm-up (default: 50)')
+parser.add_argument('-Nwu', type=int, default=1, metavar='N',
+                    help='epochs number for warm-up (default: 1 -> no warm-up)')
 
 
 args = parser.parse_args()

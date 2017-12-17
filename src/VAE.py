@@ -66,8 +66,8 @@ class VAE(nn.Module):
         mb_size (int):          minibatch size
         lr (float):             learning rate
         beta (float):           coefficient for regularization term in total loss
-        Nwu (int):              warm-up time in epochs number (default 50)
-        beta_wu (float):        beta current value (linear increase across epochs)
+        Nwu (int):              warm-up time in epochs number (default 1 -> no warm-up)
+        beta_wu (int):          beta current value (linear increase across epochs)
         beta_inc (float):       beta increment during warm-up
         epoch_nb (int):         training epochs number               
         recon_loss (list):      reconstruction loss recorder
@@ -80,7 +80,7 @@ class VAE(nn.Module):
 #---------------------------------------
 
     def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec,
-                 mb_size=64, beta=1, Nwu=150, lr=1e-3, bernoulli=True, gaussian=False):
+                 mb_size=64, beta=1, Nwu=1, lr=1e-3, bernoulli=True, gaussian=False):
         """Create a VAE strucutre by setting all attributes and calling Encoder/Decoder constructors.
 
         Args:
