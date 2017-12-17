@@ -1,3 +1,8 @@
+"""This is the example module.
+
+This module does stuff.
+"""
+
 # X -> Encoder -> Q(Z|X)
 # inputDim (int): dimension of X (input) - e.g. 513
 # dimValues (int*): hidden layers' IO dimensions - e.g. [513 128 6] for a 1 hLayer + 1(mu-sigma) layer NN
@@ -52,10 +57,10 @@ class Encoder(nn.Module):
         for index_h in range(self.nb_h):
             self.inDim_h.append(dimValues[index_h])
             self.outDim_h.append(dimValues[index_h + 1])
-            self.weights_h.append(xavier_init(
-                size=[self.inDim_h[index_h], self.outDim_h[index_h]]))
-            self.bias_h.append(Variable(torch.zeros(
-                self.outDim_h[index_h]), requires_grad=True))
+            self.weights_h.append(
+                xavier_init(size=[self.inDim_h[index_h], self.outDim_h[index_h]]))
+            self.bias_h.append(
+                Variable(torch.zeros(self.outDim_h[index_h]), requires_grad=True))
 
         # LAST LAYER is made by hand whereas for bernoulli DECODER IT'S NOT
         self.weight_mu = xavier_init(
@@ -71,7 +76,8 @@ class Encoder(nn.Module):
     def getInfo(self):
         print('\nEncoder net : ')
         for idx in range(self.nb_h):
-            print('layer ' + str(idx) + ': size ' + str(self.weights_h[idx].size(0)))
+            print('layer ' + str(idx) + ': size ' +
+                  str(self.weights_h[idx].size(0)))
 
 #------------------------------------------------------------------------------
 
@@ -138,10 +144,10 @@ class Decoder(nn.Module):
         for index_h in range(self.nb_h):
             self.inDim_h.append(dimValues[index_h])
             self.outDim_h.append(dimValues[index_h + 1])
-            self.weights_h.append(xavier_init(
-                size=[self.inDim_h[index_h], self.outDim_h[index_h]]))
-            self.bias_h.append(Variable(torch.zeros(
-                self.outDim_h[index_h]), requires_grad=True))
+            self.weights_h.append(
+                xavier_init(size=[self.inDim_h[index_h], self.outDim_h[index_h]]))
+            self.bias_h.append(
+                Variable(torch.zeros(self.outDim_h[index_h]), requires_grad=True))
 
         if gaussian and not bernoulli:
             # LAST LAYER is made by hand whereas for gaussian decoder
@@ -158,13 +164,12 @@ class Decoder(nn.Module):
     def getInfo(self):
         print('\nDecoder net : ')
         for idx in range(self.nb_h):
-            print('layer ' + str(idx) + ': size ' + str(self.weights_h[idx].size(0)))
+            print('layer ' + str(idx) + ': size ' +
+                  str(self.weights_h[idx].size(0)))
 
 #------------------------------------------------------------------------------
 
 # Xavier init
-
-
 def xavier_init(size):
     in_dim = size[0]
     xavier_stddev = 1 / np.sqrt(in_dim / 2.)

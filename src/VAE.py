@@ -1,3 +1,26 @@
+"""VAE.py
+
+This module gives a class and functions for VAE creation training and generation.
+It is used in mainScript.py
+
+Plus the vanilla VAE, it has
+    -modular encoder and decoder: can change quickly number/dim of layers and NL functions
+    -a warm-up option
+    -a bernoulli type: reconstruction loss is computed from X_sample using binary cross binary_cross_entropy
+    -a gaussian type: recon loss is computed from log(likelihood) of a gaussian distribution (X_mu, X_logSigma)
+    -a save/load workflow
+
+Todo:
+    * test reconstruction
+    * more generation functions
+    * batch normalization
+    * error handler
+
+.. Adapted from:
+   http://google.github.io/styleguide/pyguide.html
+
+"""
+
 import os
 import time
 
@@ -14,19 +37,62 @@ from torchvision import datasets, transforms
 
 from EncoderDecoder import Encoder, Decoder
 
-#------------------------------------------------------------------------------
-# VAE = { X -> Encoder-> Z -> Decoder ~> X }
-# X_dim (int): dimension of X (input) - e.g. 513
-# Z_dim (int): dimension of Z (latent) - e.g. 6
-# IOh_dims_Enc (int*): hidden layers' IO encoder dims - e.g. [513 128 6]
-# IOh_dims_Dec (int*): hidden layers' IO decoder dims - e.g. [6 128 513]
-# NL_types_*** (string*): types on nonLinearity for each layer of Encoder/Decoder
-#  e.g. NL_types_Enc = ['relu'] ; NL_types_Dec = ['relu', 'sigmoid']
 
+#---------------------------- Begin class VAE ---------------------------------
 
 class VAE(nn.Module):
+    """A nn.Module which enables VAE trainings on datasets and loadings, generatings.
 
-    def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size=64, beta=4, lr=1e-3, bernoulli=True, gaussian=False):
+    Attributes:
+
+        encoder (Encoder):      encoder structure
+        decoder (Decoder):      decoder structure
+        IOh_dims_Enc (list):    IO dimensions of encoder's layers (e.g. [1024, 600, 10])
+        IOh_dims_Dec (list):    IO dimensions of decoder's layers (e.g. [10, 600, 1024])
+        NL_funcE (list):        layers' non linear functions of encoder (e.g. ['relu'])
+        NL_funcD (list):        layers' non linear functions of decoder (e.g. ['relu', 'sigmoid'])
+
+        parameters (list):      gather weights and bias of each encoder/decoder layers
+        z_mu (Variable):        latent gaussian distributions means
+        z_logSigma (Variable):  latent gaussian distributions variances
+        X_sample (Variable):    VAE output, same dim than VAE input (used in bernoulli VAE)
+        X_mu (Variable):        VAE output, same dim than VAE input (used in gaussian VAE)
+        X_logSigma (Variable):  infers output distributions variances (used in gaussian VAE)
+
+        mb_size (int):          minibatch size
+        lr (float):             learning rate
+        beta (float):           coefficient for regularization term in total loss
+        Nwu (int):              warm-up time in epochs number (default 50)
+        beta_wu (float):        beta current value (linear increase across epochs)
+        beta_inc (float):       beta increment during warm-up
+        epoch_nb (int):         training epochs number               
+        recon_loss (list):      reconstruction loss recorder
+        regul_loss (list):      regularization loss recorder
+
+        created/trained/saved/loaded (bool):
+                                flags on VAE current state
+    """
+
+#---------------------------------------
+
+    def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec,
+                 mb_size=64, beta=3, Nwu=50, lr=1e-3, bernoulli=True, gaussian=False):
+        """Create a VAE strucutre by setting all attributes and calling Encoder/Decoder constructors.
+
+        Args:
+            X_dim (int):            input (data) and output dimension (e.g. 1024)
+            Z_dim (int):            latent space dimension  (e.g. 10)
+            IOh_dims_Enc (list):    IO dimensions of encoder's layers (e.g. [1024, 600, 10])
+            IOh_dims_Dec (list):    IO dimensions of decoder's layers (e.g. [10, 600, 1024])
+            NL_types_Enc (list):    layers' non linear functions of encoder (e.g. ['relu'])
+            NL_types_Dec (list):    layers' non linear functions of decoder (e.g. ['relu', 'sigmoid'])
+            mb_size (int):          minibatch size (default 64)
+            lr (float):             learning rate (default 0.001)
+            beta (float):           coefficient for regularization term (e.g kll) in total loss (default 3)
+            Nwu (int):              warm-up time in epochs number (default 50)
+            bernoulli (bool):       flag for bernoulli VAE type (default True)
+            gaussian (bool):        flag for gaussian VAE type (default False)
+        """
 
         # superclass init
         super(VAE, self).__init__()
@@ -72,19 +138,7 @@ class VAE(nn.Module):
                 print "ERROR_VAE: Wrong encoder NL function name"
                 return None
 
-        # learning rate
-        self.lr = lr
-        # minibacth size
-        self.mb_size = mb_size
-        self.beta = beta
-
-        self.z_mu = None
-        self.z_logSigma = None
-        self.z = None
-        self.X_sample = None
-        self.X_mu = None
-        self.X_logSigma = None
-
+        # store encoder and decoder parameters
         self.parameters = []
         for nb_h in range(self.encoder.nb_h):
             self.parameters.append(self.encoder.weights_h[nb_h])
@@ -97,12 +151,37 @@ class VAE(nn.Module):
         for nb_h in range(self.decoder.nb_h):
             self.parameters.append(self.decoder.weights_h[nb_h])
             self.parameters.append(self.decoder.bias_h[nb_h])
-
         if self.decoder.gaussian and not self.decoder.bernoulli:
             self.parameters.append(self.decoder.weight_mu)
             self.parameters.append(self.decoder.bias_mu)
             self.parameters.append(self.decoder.weight_logSigma)
             self.parameters.append(self.decoder.bias_logSigma)
+
+        # variables to infer
+        self.z_mu = None
+        self.z_logSigma = None
+        self.X_sample = None
+        self.X_mu = None
+        self.X_logSigma = None
+
+        # minibatch size
+        self.mb_size = mb_size
+        # learning rate
+        self.lr = lr
+
+        # regularization & warm-up
+        self.beta = beta
+        # avoid zero division
+        if Nwu <= 0:
+            Nwu = 1
+        self.N_wu = Nwu
+        self.beta_inc = float(beta) / float(Nwu)
+        self.beta_wu = 0
+
+        # VAE training state
+        self.epoch_nb = 0
+        self.recon_loss = []
+        self.regul_loss = []
 
         # flags on vae creation
         self.created = True
@@ -112,70 +191,106 @@ class VAE(nn.Module):
         self.saved = False
         self.loaded = False
 
-        self.epoch_nb = 0
+    #---------------------------------------
 
     def forward(self, X):
+        """Compute forward through VAE. Called in trainVAE() for loop (see 'self(X)')."""
         if self.created == False:
             print "ERROR_VAE_forward: VAE not correctly created"
             return None
         # compute z from X
         # the size -1 is inferred from other dimensions
-        self.z = self.encode(X.view(-1, self.encoder.dimX))
+        z = self.encode(X.view(-1, self.encoder.dimX))
+        # compute X_sample (or X_mu for gaussian) from z
+        self.decode(z)
 
-        self.decode(self.z)
+    #---------------------------------------
 
     def encode(self, X):
+        """Encode input with encoder to latent space representation.
+
+        Args:
+            X: input data.
+
+        Returns:
+            z reparameterized distribution.
+
+        """
         # first layer takes X in input
-        var_h = getattr(F, self.NL_funcE[0])(torch.mm(X, self.encoder.weights_h[
-            0]) + self.encoder.bias_h[0].repeat(X.size(0), 1))
-        # then var_h goes through deeper layers
+        var_h = getattr(F, self.NL_funcE[0])(
+            torch.mm(X, self.encoder.weights_h[0])
+            + self.encoder.bias_h[0].repeat(X.size(0), 1))
+        # then variable var_h goes through deeper layers
         for i in range(self.encoder.nb_h - 1):
-            var_h = getattr(F, self.NL_funcE[
-                            i + 1])(torch.mm(var_h, self.encoder.weights_h[i + 1]) + self.encoder.bias_h[i + 1].repeat(var_h.size(0), 1))
+            var_h = getattr(F, self.NL_funcE[i + 1])(
+                torch.mm(var_h, self.encoder.weights_h[i + 1])
+                + self.encoder.bias_h[i + 1].repeat(var_h.size(0), 1))
 
         # get z's mu and logSigma
-        self.z_mu = torch.mm(var_h, self.encoder.weight_mu) + \
-            self.encoder.bias_mu.repeat(var_h.size(0), 1)
-        self.z_logSigma = torch.mm(var_h, self.encoder.weight_logSigma) + \
-            self.encoder.bias_logSigma.repeat(var_h.size(0), 1)
+        self.z_mu = (torch.mm(var_h, self.encoder.weight_mu)
+                     + self.encoder.bias_mu.repeat(var_h.size(0), 1))
+        self.z_logSigma = (torch.mm(var_h, self.encoder.weight_logSigma)
+                           + self.encoder.bias_logSigma.repeat(var_h.size(0), 1))
 
         # reparametrization trick
-        return self.reparametrize()
+        return self.reparameterize()
+
+    #---------------------------------------
 
     def decode(self, z):
+        """Decode latent space update output variables."""
         # first layer takes z in input
-        var_h = getattr(F, self.NL_funcD[0])(torch.mm(z, self.decoder.weights_h[
-            0]) + self.decoder.bias_h[0].repeat(z.size(0), 1))
-        # then var_h goes through deeper layers
+        var_h = getattr(F, self.NL_funcD[0])(
+            torch.mm(z, self.decoder.weights_h[0])
+            + self.decoder.bias_h[0].repeat(z.size(0), 1))
+        # then variable var_h goes through deeper layers
         for i in range(self.decoder.nb_h - 1):
-            var_h = getattr(F, self.NL_funcD[
-                            i + 1])(torch.mm(var_h, self.decoder.weights_h[i + 1]) + self.decoder.bias_h[i + 1].repeat(var_h.size(0), 1))
+            var_h = getattr(F, self.NL_funcD[i + 1])(
+                torch.mm(var_h, self.decoder.weights_h[i + 1]) +
+                self.decoder.bias_h[i + 1].repeat(var_h.size(0), 1))
 
         if self.decoder.bernoulli and not self.decoder.gaussian:
             self.X_sample = var_h
         elif self.decoder.gaussian and not self.decoder.bernoulli:
             # get X_sample's mu and logSigma
-            self.X_mu = torch.mm(var_h, self.decoder.weight_mu) + \
-                self.decoder.bias_mu.repeat(var_h.size(0), 1)
-            self.X_logSigma = torch.mm(
-                var_h, self.decoder.weight_logSigma) + self.decoder.bias_logSigma.repeat(var_h.size(0), 1)
+            self.X_mu = (torch.mm(var_h, self.decoder.weight_mu)
+                         + self.decoder.bias_mu.repeat(var_h.size(0), 1))
+            self.X_logSigma = (torch.mm(var_h, self.decoder.weight_logSigma)
+                               + self.decoder.bias_logSigma.repeat(var_h.size(0), 1))
+            # To avoid recon loss negative value
+            # for i in range(self.decoder.dimX): 
+            #     if self.X_logSigma.data[i] < -1.837877:
+            #         self.X_logSigma.data[i] = -1.837877
         else:
             print("ERROR VAE: wrong decoder type")
             raise
 
-    def reparametrize(self):
+    #---------------------------------------
+
+    def reparameterize(self):
+        """Reparametrization trick. Enables to compute backward gradient.
+
+        Returns:
+            reparameterized distribution
+
+        """
         std = self.z_logSigma.mul(0.5).exp_()
         eps = Variable(std.data.new(std.size()).normal_())
         return eps.mul(std).add_(self.z_mu)
 
+    #---------------------------------------
+
     def loss(self, X):
+        """Compute loss from reconstrucion (compare input to output)
+            and from regularisation (representation)"""
+
         if self.decoder.bernoulli and not self.decoder.gaussian:
             # Bernoulli
             recon = F.binary_cross_entropy(
                 self.X_sample, X.view(-1, self.encoder.dimX))
             recon /= self.mb_size * self.encoder.dimX
         elif self.decoder.gaussian and not self.decoder.bernoulli:
-            # gaussian
+            # Gaussian
             X_sigma = torch.exp(self.X_logSigma)
             firstTerm = torch.log(2 * np.pi * X_sigma)
             secondTerm = ((self.X_mu - X)**2) / X_sigma
@@ -184,13 +299,23 @@ class VAE(nn.Module):
         else:
             print("ERROR_VAE: VAE type unknown")
             raise
-        kld = torch.mean(0.5 * torch.sum(torch.exp(self.z_logSigma) +
-                                         self.z_mu**2 - 1. - self.z_logSigma, 1))
-        loss = recon + self.beta * kld
-        return loss
+        regul = torch.mean(0.5 * torch.sum(torch.exp(self.z_logSigma)
+                                           + self.z_mu**2 - 1.
+                                           - self.z_logSigma, 1))
+        regul *= self.beta_wu
+        loss = recon + regul
+        return loss, recon, regul
+
+    #---------------------------------------
 
     def trainVAE(self, train_loader, epochNb):
+        """For loop of (forward -> backward) on entire dataset 
 
+        Args:
+            train_loader:   introduces the dataset to the VAE.
+            epochNb:        number of loops
+
+        """
         self.train()
         # check mb_size
         if train_loader.batch_size != self.mb_size:
@@ -207,10 +332,14 @@ class VAE(nn.Module):
         for epoch in range(self.epoch_nb + 1, epochNb + 1):
 
             lossValue = 0
+            reconVal = 0
+            regulVal = 0
 
             for i, sample_batched in enumerate(train_loader):
-                batch_length = sample_batched['image'].size(
-                    1) * sample_batched['image'].size(0)
+
+                batch_length = (sample_batched['image'].size(1)
+                                * sample_batched['image'].size(0))
+                dataset_length = len(train_loader.dataset)
 
                 # make sure the size of the batch corresponds to
                 # mbSize*dataSize
@@ -222,15 +351,18 @@ class VAE(nn.Module):
                     raise
 
                 # convert 'double' tensor to 'float' tensor
-                X = sample_batched['image'].view(
-                    self.mb_size, self.encoder.dimX).float()
+                X = (sample_batched['image'].view(
+                    self.mb_size, self.encoder.dimX)).float()
                 X = Variable(X)
                 self(X)
                 # compute loss between data input and sampled data
-                lossVariable = self.loss(X)
-
+                lossVariable, recon, regul = self.loss(X)
                 lossVariable.backward()
                 lossValue += lossVariable.data[0]
+
+                # catch recon and regul values
+                reconVal += recon.data[0]
+                regulVal += regul.data[0]
 
                 optimizer.step()
 
@@ -240,12 +372,24 @@ class VAE(nn.Module):
                         data = p.grad.data
                         p.grad = Variable(data.new().resize_as_(data).zero_())
 
+            # gradually increase beta during warm-up
+            if(self.beta_wu < self.beta):
+                self.beta_wu += self.beta_inc
+
+            # log out loss current value
             print('====> Epoch: {} Average loss: {:.8f}'.format(
-                  epoch, lossValue / len(train_loader.dataset)))
+                  epoch, lossValue / dataset_length))
+            self.recon_loss.append(reconVal / dataset_length)
+            self.regul_loss.append(regulVal / dataset_length)
+
         self.trained = True
         self.epoch_nb = epochNb
 
+    #---------------------------------------
+
     def save(self, datasetName, saveDir):
+        """Save entire VAE class attributes and methods with exhaustive savename"""
+
         # transform .npz to avoid dot in name (consider only .npz for now)
         name = datasetName.replace(".npz", "_NPZ")
         # add infos on vae structure
@@ -291,7 +435,11 @@ class VAE(nn.Module):
         self.saved = True
         return name
 
+    #---------------------------------------
+
     def getParams(self):
+        """Returns all VAE parameters concatenated."""
+
         listParams = []
         listParams.append(self.encoder.dimX)
         listParams.append(self.decoder.dimZ)
@@ -308,27 +456,40 @@ class VAE(nn.Module):
 
         return listParams
 
-    def generate(self, frameNb, saveDir):
+    #---------------------------------------
+
+    def generate(self, frameNb, saveDir, zRange):
+        """Generate samples from decoder. Working only for zdim = 2"""
+
         self.eval()
         # tensorParamValues = torch.FloatTensor(
         #     frameNb, self.decoder.dimZ).zero_()
         tensorParamValues = torch.FloatTensor(
-            frameNb, 1).zero_()
-        for i in range(frameNb):
-            # ramp between 0 and 1 for all z dimensions (not enough...)
-            tensorParamValues[i][:] = float(i * 20) / float(frameNb) - 10
+            frameNb, self.decoder.dimZ).zero_()
+        for z1Value in range(-zRange, zRange):
+            for i in range(frameNb):
+                # ramp between 0 and 1 for all z dimensions (not enough...)
+                tensorParamValues[i][1] = float(
+                    i * zRange) / float(frameNb) - zRange / 2
+                tensorParamValues[i][0] = z1Value
 
-        sample = Variable(tensorParamValues)
-        self.decode(sample)
-        if self.decoder.bernoulli and not self.decoder.gaussian:
-            image = self.X_sample.cpu()
-        elif self.decoder.gaussian and not self.decoder.bernoulli:
-            image = self.X_mu.cpu()
-        save_image(image.data.view(frameNb, self.decoder.dimX),
-                   saveDir + 'z0LinearRamp.png')
+            sample = Variable(tensorParamValues)
+            self.decode(sample)
+            if self.decoder.bernoulli and not self.decoder.gaussian:
+                image = self.X_sample.cpu()
+            elif self.decoder.gaussian and not self.decoder.bernoulli:
+                image = self.X_mu.cpu()
+            save_image(image.data.view(frameNb, self.decoder.dimX),
+                       saveDir + 'z0LinearCenteredRamp' + str(zRange) + '_z1_' + str(z1Value) + '.png')
 
+#---------------------------- End class VAE -----------------------------------
+
+
+#---------------------------- Begin functions ---------------------------------
 
 def loadVAE(vaeSaveName, load_dir):
+    """Load a VAE class from a saved file."""
+
     if not os.path.exists(load_dir):
         print("ERROR_VAE_Load: " + load_dir + " invalid directory")
         raise
@@ -348,10 +509,11 @@ def loadVAE(vaeSaveName, load_dir):
         vae.loaded = True
         return vae
 
-#------------------------------------------------------------------------------
+#---------------------------------------
 
 
 def getParamsFromName(vaeSaveName):
+    """Returns all VAE parameters concatenated from parsing saved filename."""
     # e.g.vaeSaveName =
     # 'dummyDataset100_NPZ_E<1024-relu-401-muSig-6>_D<6-relu-399-sigmoid-1024>_beta4_mb10_lr0dot001_ep11'
     s_split = vaeSaveName.split("_")
@@ -425,3 +587,5 @@ def getParamsFromName(vaeSaveName):
     listParams.append(gaussian)
 
     return listParams
+
+#---------------------------- End functions -----------------------------------

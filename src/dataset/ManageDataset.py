@@ -1,3 +1,7 @@
+"""This is the example module.
+
+This module does stuff.
+"""
 # To manage Dataset (especially batch structure) on .npz data
 
 import torch

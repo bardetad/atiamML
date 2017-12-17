@@ -118,4 +118,4 @@ elif mode == "load":
     # vae.trainVAE(train_loader, epoch_nb)
     # vae.save(datasetName, saveDir)
 
-    vaeLoaded.generate(10000, directory)
+    vaeLoaded.generate(1000, directory, 50)
