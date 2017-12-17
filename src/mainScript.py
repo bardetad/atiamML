@@ -59,6 +59,10 @@ parser.add_argument('-mb-size', type=int, default=10, metavar='N',
                     help='input batch size for training (default: 10)')
 parser.add_argument('-epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
+parser.add_argument('-beta', type=float, default=1, metavar='N',
+                    help='beta coefficient for regularization (default: 1)')
+parser.add_argument('-Nwu', type=int, default=50, metavar='N',
+                    help='epochs number for warm-up (default: 50)')
 
 
 args = parser.parse_args()
@@ -67,6 +71,8 @@ mode = args.mode
 # copy parser args into variables
 mb_size = args.mb_size
 epoch_nb = args.epochs
+beta = args.beta
+Nwu = args.Nwu
 
 # prepare dataset
 datasetName = args.dataset_path.split("/")[-1]
@@ -88,10 +94,10 @@ if mode == "train":
     NL_types_Dec = args.decoderNL
     if args.type == 'bernoulli':
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=True, gaussian=False)
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=True, gaussian=False, beta=beta, Nwu=Nwu)
     elif args.type == 'gaussian':
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True)
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True, beta=beta, Nwu=Nwu)
     else:
         print("ERROR script: Chose VAE type -> either bernoulli or gaussian")
 
