@@ -1,7 +1,8 @@
 """VAE.py
 
 This module gives a class and functions for VAE creation training and generation.
-It is used in mainScript.py
+It is used in ./mainScript.py
+Unit testing: see ../unitTest/VAETest.py
 
 Plus the vanilla VAE, it has
     -modular encoder and decoder: can change quickly number/dim of layers and NL functions
@@ -9,6 +10,8 @@ Plus the vanilla VAE, it has
     -a bernoulli type: reconstruction loss is computed from X_sample using binary cross binary_cross_entropy
     -a gaussian type: recon loss is computed from log(likelihood) of a gaussian distribution (X_mu, X_logSigma)
     -a save/load workflow
+
+NB: for either bernoulli or gaussian type, see Decoder class in ./EncoderDecoder.py 
 
 Todo:
     * test reconstruction
@@ -23,6 +26,7 @@ Todo:
 
 import os
 import time
+import math
 
 import torch
 import torch.nn as nn
@@ -76,7 +80,7 @@ class VAE(nn.Module):
 #---------------------------------------
 
     def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec,
-                 mb_size=64, beta=3, Nwu=50, lr=1e-3, bernoulli=True, gaussian=False):
+                 mb_size=64, beta=1, Nwu=150, lr=1e-3, bernoulli=True, gaussian=False):
         """Create a VAE strucutre by setting all attributes and calling Encoder/Decoder constructors.
 
         Args:
@@ -258,7 +262,7 @@ class VAE(nn.Module):
             self.X_logSigma = (torch.mm(var_h, self.decoder.weight_logSigma)
                                + self.decoder.bias_logSigma.repeat(var_h.size(0), 1))
             # To avoid recon loss negative value
-            # for i in range(self.decoder.dimX): 
+            # for i in range(self.decoder.dimX):
             #     if self.X_logSigma.data[i] < -1.837877:
             #         self.X_logSigma.data[i] = -1.837877
         else:
@@ -357,6 +361,11 @@ class VAE(nn.Module):
                 self(X)
                 # compute loss between data input and sampled data
                 lossVariable, recon, regul = self.loss(X)
+                # if nan value, backup VAE before backward
+                if math.isnan(lossVariable.data[0]):
+                    print("ERROR_VAE_train: there are nan values")
+                    self.save('vae_backup_epoch' + str(epoch), './backup')
+                    raise
                 lossVariable.backward()
                 lossValue += lossVariable.data[0]
 
@@ -376,11 +385,12 @@ class VAE(nn.Module):
             if(self.beta_wu < self.beta):
                 self.beta_wu += self.beta_inc
 
-            # log out loss current value
-            print('====> Epoch: {} Average loss: {:.8f}'.format(
-                  epoch, lossValue / dataset_length))
+            # record losse contributions
             self.recon_loss.append(reconVal / dataset_length)
             self.regul_loss.append(regulVal / dataset_length)
+            # log out loss current value
+            print('====> Epoch: {} Average loss: {:.6f} (recon loss: {:.6f} regul loss: {:.6f})'.format(
+                  epoch, lossValue / dataset_length, reconVal / dataset_length, regulVal / dataset_length))
 
         self.trained = True
         self.epoch_nb = epochNb
