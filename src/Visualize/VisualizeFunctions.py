@@ -120,27 +120,46 @@ def CreateZMesh(VAE_test):
     fig.show()
 
 # visualize with PCA
-def PlotPCA(VAE_test, labels_np, PCAdim):
-    z_mu = VAE_test.z_mu
-    z_mu = z_mu.data.numpy()
+def PlotPCA(VAE_test, trainloader, PCAdim, factor, nb_labels):
+    dataiter = iter(trainloader)
+    sample_dict = dataiter.next()
+    labels = sample_dict['label']
+    label_ar = np.zeros((1,labels.shape[1]))  
+    z_mu_ar = np.zeros((1,VAE_test.encoder.dimZ))
+    
+    for i in range(nb_labels/VAE_test.mb_size):
+        dataiter = iter(trainloader)
+        sample = dataiter.next()
+        X = sample['image'].float()
+        label = sample['label'].numpy()
+        X = Variable(X)
+        
+        # Actual VAE
+        VAE_test.forward(X)
+        label_ar = np.append(label_ar,label,axis=0)
+    
+        z_mu = VAE_test.z_mu
+        z_mu = z_mu.data.numpy()
+        z_mu_ar = np.append(z_mu_ar, z_mu,axis=0)
+    label_ar = np.delete(label_ar,0,axis=0)
+    z_mu_ar = np.delete(z_mu_ar,0,axis=0)
     
     sklearn_pca = sklearnPCA(PCAdim)
-    PCA_proj = sklearn_pca.fit_transform(z_mu)
+    PCA_proj = sklearn_pca.fit_transform(z_mu_ar)
     
     fig = plt.figure(figsize=(12, 8))
-    for k in range(5):
-        ax = fig.add_subplot(3,2,k+1)
-        for i in range(10):
-            bool_ar = labels_np[:,k] == i
-            color_ar = np.random.random_sample((3,))
-            for j in range(len(PCA_proj[bool_ar,0])):
-                x = PCA_proj[bool_ar, 0][j]
-                y = PCA_proj[bool_ar, 1][j]
-                ax.text(x, y, str(i), bbox=dict(color = color_ar, alpha=0.5), fontsize=12)
-        add_x = np.std(PCA_proj[:,0])/2
-        add_y = np.std(PCA_proj[:,1])/2
-        ax.set_xlim(min(PCA_proj[:,0])-add_x ,max(PCA_proj[:,0])+add_x )
-        ax.set_ylim(min(PCA_proj[:,1])-add_y,max(PCA_proj[:,1])+add_y)
+    ax = fig.add_subplot(1,1,1)
+    for i in range(20):
+        bool_ar = label_ar[:,factor] == i
+        color_ar = np.random.random_sample((3,))
+        for j in range(len(PCA_proj[bool_ar,0])):
+            x = PCA_proj[bool_ar, 0][j]
+            y = PCA_proj[bool_ar, 1][j]
+            ax.text(x, y, str(i), bbox=dict(color = color_ar, alpha=0.5), fontsize=12)
+    add_x = np.std(PCA_proj[:,0])/2
+    add_y = np.std(PCA_proj[:,1])/2
+    ax.set_xlim(min(PCA_proj[:,0])-add_x*4 ,max(PCA_proj[:,0])+add_x*4)
+    ax.set_ylim(min(PCA_proj[:,1])-add_y*4,max(PCA_proj[:,1])+add_y*4)
     
     plt.show()
     
@@ -192,7 +211,10 @@ def BPlotLabelLoss(loss_dataset, label_ar, VAE_test):
     fig = plt.figure(1, figsize=(9, 6))  
     ax1 = fig.add_subplot(111)
     plt.boxplot(box_mat)
-    ax1.set_title('Loss for 4 variational factors')
+    if label_ar.shape[1] == 4:
+        ax1.set_title('Loss for 4 variational factors')
+    elif label_ar.shape[1] == 5:
+        ax1.set_title('Loss for 5 variational factors')
     ax1.set_ylabel('Loss')
     if label_ar.shape[1] == 4:
         ax1.set_xticklabels(['Inharmonicity', '# Harmonics', 'Filter Q', 'Filter freq.'])
@@ -205,8 +227,11 @@ def BPlotLabelLoss(loss_dataset, label_ar, VAE_test):
     plt.show()
 
 # plot loss evolution
-def plotLoss(model_folder, data_set, data_name, Z_dim):
-    loss_vector = np.load(model_folder + data_set + '_' + data_name + str(Z_dim) + 'loss_.npy')
+def plotLoss(VAE_test):
+#    loss_vector = np.load(model_folder + data_set + '_' + data_name + str(Z_dim) + 'loss_.npy')
+    recon = np.asarray(VAE_test.recon_loss)
+    regul = np.asarray(VAE_test.regul_loss)
+    loss_vector = np.asarray((recon+regul, recon, regul)).T
     fig, ax = plt.subplots()
     x_axis = range(0,len(loss_vector))
     ax.plot(x_axis, loss_vector[0:,0], 'k--', label='Total loss')
@@ -214,6 +239,15 @@ def plotLoss(model_folder, data_set, data_name, Z_dim):
     ax.plot(x_axis, loss_vector[0:,2], 'k', label='Kull/Leib loss')
     ax.legend(loc='upper center', shadow=True)
     
+def plotLoss_depreciated(model_folder, data_set, data_name, Z_dim):
+    loss_vector = np.load(model_folder + data_set + '_' + data_name + str(Z_dim) + 'loss_.npy')
+    fig, ax = plt.subplots()
+    x_axis = range(0,len(loss_vector))
+    ax.plot(x_axis, loss_vector[0:,0], 'k--', label='Total loss')
+    ax.plot(x_axis, loss_vector[0:,1], 'k:', label='Reconstruction loss')
+    ax.plot(x_axis, loss_vector[0:,2], 'k', label='Kull/Leib loss')
+    ax.legend(loc='upper center', shadow=True)
+
 # ###############################  Test 3:  Signal Reconstruction and granular synth ###############################
 def MoveAudio(data_folder, dataname, labels_np, idx):
     label_in = labels_np[idx]
@@ -231,23 +265,36 @@ def MoveAudio(data_folder, dataname, labels_np, idx):
     y, sr = librosa.load(data_folder + folder + '/' + filename, sr=None)
     output_name = 'test_stft'
     librosa.output.write_wav(output_name + '.wav', y, 44100) 
-
-def SpecToAudio(X_mu_np, idx):
+    
+def SpecPhaseToAudio(X_mu_np, idx, nbFrames, outputpath = ''):
     Nfft = 4096
-    nbFrames = 200
+    spectrum_in = X_mu_np[idx,1025:2050]
+    phase_in = X_mu_np[idx,0:1025]
+    S = np.repeat(spectrum_in[np.newaxis].T,nbFrames,axis=1)
+    phase_in = np.repeat(phase_in[np.newaxis].T,nbFrames,axis=1)
+    S = np.append(S, np.zeros((Nfft/2-S.shape[0]+1,nbFrames)),axis=0)
+    x = griffLim_stft(S, phase_in)
+    output_name = 'ReconAudio_'
+    librosa.output.write_wav(outputpath + output_name + 'gl.wav', x, 44100)
+
+def SpecToAudio(X_mu_np, idx, nbFrames, outputpath = ''):
+    Nfft = 4096
     S = np.repeat(X_mu_np[idx,:][np.newaxis].T,nbFrames,axis=1)
     S = np.append(S, np.zeros((Nfft/2-S.shape[0]+1,nbFrames)),axis=0)
     x = griffLim_stft(S)
     output_name = 'ReconAudio_'
-    librosa.output.write_wav(output_name + 'gl.wav', x, 44100)
-    librosa.output.write_wav(output_name + 'nophase.wav', librosa.istft(S), 44100)
+    librosa.output.write_wav(outputpath + output_name + 'gl.wav', x, 44100)
     
-def griffLim_stft(S): 
+def griffLim_stft(S, Phase = 0): 
     Nfft = S.shape[0]*2 - 2
     S = np.log1p(np.abs(S))  
     a = np.zeros_like(S)
     a = np.exp(S) - 1
-    p = 2*np.pi*np.random.random_sample(a.shape) -np.pi
+    if not type(Phase) == int:
+        Phase = np.append(Phase, np.random.random_sample((Nfft/2-Phase.shape[0]+1,Phase.shape[1])),axis=0)
+        p = Phase
+    else:
+        p = 2*np.pi*np.random.random_sample(a.shape) -np.pi
     for i in xrange(250):
         S = a*np.exp(1j*p)
         x = librosa.istft(S)
@@ -255,11 +302,14 @@ def griffLim_stft(S):
         p = np.angle(spec)
     return x
 
-def MDCTToAudio(X_mu_np, idx, nbFrames):
+def MDCTToAudio(X_mu_np, idx, nbFrames, outputpath = ''):
     x = X_mu_np[idx,:]
     y = imdct4(x)
+    temp = np.zeros((nbFrames*len(y)/2))
+    for i in range(nbFrames-1):
+        temp[i*len(y)/2:(i+2)*len(y)/2] += y
     output_name = 'ReconAudio_'
-    librosa.output.write_wav(output_name + 'MDCT.wav', y, 44100)
+    librosa.output.write_wav(outputpath + output_name + 'MDCT.wav', temp, 44100)
     
 def imdct4(x):
     N = x.shape[0]
