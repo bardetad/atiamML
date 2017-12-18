@@ -40,7 +40,7 @@ def PCA_vision(dataX, labels, dim=2):
     """PCA_vision(data, dim=2) : This function's input is a Torch Tensor or a np.array containing high-dimensionality data
     and it plots the low dimensionality data (dim=2 by default) found with PCA algorithm"""
     tensor = PCA_reduction(dataX,dim)
-    new = tensor.numpy()
+    new = tensor[0].numpy()
     plt.scatter(new[:,0],new[:,1],20,labels) #wouldn't work with dim!=2
     plt.show()
     return True
