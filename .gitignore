@@ -23,3 +23,7 @@ data/beta10_n8_phi6.npz
 data/beta11_n2_phi1.wav
 
 data/beta22_n3_phi2.wav
+
+*.pyc
+
+src/toy-dataset-1_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb50_lr0dot001_ep250
