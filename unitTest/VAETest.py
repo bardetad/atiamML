@@ -185,7 +185,7 @@ class TestVAEFunctions(unittest.TestCase):
                 out = vae.X_sample
             else: 
                 raise
-            loss = vae.loss(X)
+            loss, _, _ = vae.loss(X)
             if i == 0:
                 initialLoss = loss.data[0]
             if(i%10 == 0):
@@ -235,7 +235,7 @@ class TestVAEFunctions(unittest.TestCase):
                 out = vae.X_sample
             else: 
                 raise
-            loss = vae.loss(X)
+            loss, _, _ = vae.loss(X)
             if i == 0:
                 initialLoss = loss.data[0]
             if(i%10 == 0):
