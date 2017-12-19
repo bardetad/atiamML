@@ -297,8 +297,8 @@ class VAE(nn.Module):
         elif self.decoder.gaussian and not self.decoder.bernoulli:
             # Gaussian
 #            X_sigma = torch.exp(self.X_logSigma)
-            firstTerm = np.log(2 * np.pi) * self.X_logsigma
-            secondTerm = ((self.X_mu - X)**2) / self.X_logsigma.exp()
+            firstTerm = self.X_logSigma * np.log(2 * np.pi)
+            secondTerm = ((self.X_mu - X)**2) / self.X_logSigma.exp()
             recon = 0.5 * torch.sum(firstTerm + secondTerm)
             recon /= (self.mb_size * self.encoder.dimX)
         else:
