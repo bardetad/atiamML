@@ -76,7 +76,7 @@ bhXo_sigma = torch.autograd.Variable(torch.zeros(X_dim),requires_grad=True)
 def P(z): # Two-layer decoder network
     h = torch.nn.functional.relu(torch.mm(z,wzh) + bzh)
     Xo_mu = torch.nn.functional.leaky_relu(torch.mm(h,whXo_mu) + bhXo_mu)
-    Xo_sigma = torch.nn.functional.relu6(
+    Xo_sigma = torch.nn.functional.relu6( # NO! ln(Machine epsilon) thresh!
             torch.mm(h,whXo_sigma) + bhXo_sigma)
 #    X = torch.nn.functional.sigmoid(torch.mm(h,whX) + bhX)
     return Xo_mu,Xo_sigma
@@ -95,19 +95,20 @@ for epoch in xrange(Nepoch):
         z = zParam(z_mu,z_sigma)
         Xo_mu,Xo_sigma = P(z)
         # Loss 
-        reconLoss = -0.5*X_dim*torch.sum(2*np.pi*Xo_sigma)
+        reconLoss = -0.5*X_dim*torch.sum(np.log(2*np.pi)*Xo_sigma)
 #        reconLoss -= torch.sum(
 #                torch.sum((X-Xo_mu).pow(2))/((2*Xo_sigma.exp())))
         # Test without second sum
         reconLoss -= torch.sum(((X-Xo_mu).pow(2))/((2*Xo_sigma.exp())))
-        reconLoss /= (miniBatchSize*X_dim) 
+#        reconLoss /= (miniBatchSize*X_dim)
         # Gaussian distribution log-likelihood
         # Takes into account the fact that sigma here represents log(sigma^2)
         klLoss = -0.5*torch.sum(-(z_sigma.exp())-(z_mu.pow(2))+1.+z_sigma)
-        beta = float(it*epoch)/(Nit*Nepoch)
+        beta = 2
+        beta *= float(it*epoch)/(Nit*Nepoch)
         klLoss *= beta
-        klLoss /= (miniBatchSize*X_dim)
-        loss = -reconLoss + klLoss
+#        klLoss /= (miniBatchSize*X_dim)
+        loss = (-reconLoss + klLoss)/(miniBatchSize*X_dim)
         # Backward
         loss.backward()
         # Update

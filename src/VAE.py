@@ -261,10 +261,11 @@ class VAE(nn.Module):
                          + self.decoder.bias_mu.repeat(var_h.size(0), 1))
             self.X_logSigma = (torch.mm(var_h, self.decoder.weight_logSigma)
                                + self.decoder.bias_logSigma.repeat(var_h.size(0), 1))
-            # To avoid recon loss negative value
-            # for i in range(self.decoder.dimX):
-            #     if self.X_logSigma.data[i] < -1.837877:
-            #         self.X_logSigma.data[i] = -1.837877
+            log_Sigma_np = self.X_logSigma.data.numpy()
+            mask = log_Sigma_np < -10
+            if mask.any():
+                np.place(log_Sigma_np,mask,-10)
+                self.X_logSigma = Variable(torch.FloatTensor(log_Sigma_np))
         else:
             print("ERROR VAE: wrong decoder type")
             raise
@@ -295,9 +296,9 @@ class VAE(nn.Module):
             recon /= self.mb_size * self.encoder.dimX
         elif self.decoder.gaussian and not self.decoder.bernoulli:
             # Gaussian
-            X_sigma = torch.exp(self.X_logSigma)
-            firstTerm = torch.log(2 * np.pi * X_sigma)
-            secondTerm = ((self.X_mu - X)**2) / X_sigma
+#            X_sigma = torch.exp(self.X_logSigma)
+            firstTerm = np.log(2 * np.pi) * self.X_logsigma
+            secondTerm = ((self.X_mu - X)**2) / self.X_logsigma.exp()
             recon = 0.5 * torch.sum(firstTerm + secondTerm)
             recon /= (self.mb_size * self.encoder.dimX)
         else:
