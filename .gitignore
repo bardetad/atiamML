@@ -27,3 +27,9 @@ data/beta22_n3_phi2.wav
 *.pyc
 
 src/toy-dataset-1_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb50_lr0dot001_ep250
+
+src/Spectrumsdataset2BVK_NPZ4_E<1025-relu6-500-muSig-4>_D<4-relu6-500-muSig-1025>_beta1_mb50_lr0dot0001_ep200
+
+src/Spectrumsdataset3BVK_NPZz5_E<1025-relu6-400-muSig-5>_D<5-relu6-400-muSig-1025>_beta1_mb50_lr0dot0001_ep200
+
+src/toy-dataset-1_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb50_lr0dot001_ep800

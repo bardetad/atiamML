@@ -32,8 +32,8 @@ learningRate = 0.001
 
 def extractMiniBatch(data,miniBatchSize):
     i = np.random.randint((np.size(data,axis=0)-miniBatchSize))
-    np.random.shuffle(data)
-    X = data[i:(i+miniBatchSize)]
+    np.random.shuffle(data) # Make this actually random!
+    X = data[i:(i+miniBatchSize)] # NO NO NO!
     return X
 
 def varInit(size): # Initializes network input variables
