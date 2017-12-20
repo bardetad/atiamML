@@ -3,7 +3,7 @@ Chemla - Latent representations for real-time synthesis space exploration
 ***
 # **Warnings**
 ##### Before each commit **run unit tests** in *./unitTest/* folder
-#####Name of datasets **should NOT** contain '_' characters
+##### Name of datasets **should NOT** contain '_' characters
 ##### **mb-size** needs to be a divider of total dataset length.
 ***
 # **Use of mainScript.py**
@@ -13,9 +13,9 @@ Chemla - Latent representations for real-time synthesis space exploration
 python mainScript.py --help
 ```
 ***
-###**Examples**
+### **Examples**
 
-####1. Training
+#### 1. Training
  To train a **Gaussian VAE** on *dataset.npz* file of  44800 data , data dim of 1024, z dim of 10, 1-'relu'-layer NN for Encoder and Decoder and save it in *../data/savedVAE/* folder, the total command should be:
 ```{r, engine='bash', count_lines}
 python mainScript.py -mode "train" -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" -type "gaussian" -dataset-path "../data/dataset.npz" -dataKey "images" -save-path "../data/savedVAE/" -mb-size 10 -epochs 10  
@@ -41,8 +41,18 @@ Bernoulli equivalent :
 ```{r, engine='bash', count_lines}
 python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" "sigmoid" -type "bernoulli"
 ```
+**More flags**
+- Warm-up (in number of epochs)
+```{r, engine='bash', count_lines}
+-Nwu 100
+```
+- Noise input during training (gain value of a random gaussian noise)
+```{r, engine='bash', count_lines}
+-noise 1.5
+```
 
-####2. Loading VAE & sampling latent space
+
+#### 2. Loading VAE, visualisation & sampling latent space
 Instead of using the default mode **"train"** in command, use the mode **"load"** with flag:
 ```{r, engine='bash', count_lines}
 -mode "load"
@@ -57,9 +67,6 @@ For now it only samples from the first dimension of latent space and create an i
 **NB** - the save name of the VAE after training is very heavy.
 Example : *../data/dummySave/dummyDataset100_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta4_mb10_lr0dot001_ep10*
 But very useful as it contains all the info on VAE structure and state at the end of its training.
-
-####3. Retrain VAE from a savefile
-**TODO** - add a third mode "retrain" which enable to load a vae continue training until a bigger epochs number and save it.
 
 ---
 # **Code documentation**
