@@ -13,9 +13,8 @@ Chemla - Latent representations for real-time synthesis space exploration
 python mainScript.py --help
 ```
 ***
-### **Examples**
 
-#### 1. Training
+### 1. Training
  To train a **Gaussian VAE** on *dataset.npz* file of  44800 data , data dim of 1024, z dim of 10, 1-'relu'-layer NN for Encoder and Decoder and save it in *../data/savedVAE/* folder, the total command should be:
 ```{r, engine='bash', count_lines}
 python mainScript.py -mode "train" -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" -type "gaussian" -dataset-path "../data/dataset.npz" -dataKey "images" -save-path "../data/savedVAE/" -mb-size 10 -epochs 10  
@@ -52,7 +51,7 @@ python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -enco
 ```
 
 
-#### 2. Loading VAE, visualisation & sampling latent space
+### 2. Loading VAE, visualisation & sampling latent space
 Instead of using the default mode **"train"** in command, use the mode **"load"** with flag:
 ```{r, engine='bash', count_lines}
 -mode "load"
