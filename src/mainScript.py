@@ -6,6 +6,7 @@ sys.path.append('./')
 sys.path.append('./dataset/')
 
 import torch
+import numpy as np
 
 from VAE import VAE
 from VAE import loadVAE
@@ -63,6 +64,8 @@ parser.add_argument('-beta', type=int, default=1, metavar='N',
                     help='beta coefficient for regularization (default: 1)')
 parser.add_argument('-Nwu', type=int, default=1, metavar='N',
                     help='epochs number for warm-up (default: 1 -> no warm-up)')
+parser.add_argument('-noise', type=float, default=0., metavar='f',
+                    help='noise gain added to data inputs during training (default: 0.)')
 
 
 args = parser.parse_args()
@@ -73,6 +76,11 @@ mb_size = args.mb_size
 epoch_nb = args.epochs
 beta = args.beta
 Nwu = args.Nwu
+noiseGain = args.noise
+noise = False
+
+if noiseGain != 0.:
+    noise = True
 
 # prepare dataset
 datasetName = args.dataset_path.split("/")[-1]
@@ -94,10 +102,12 @@ if mode == "train":
     NL_types_Dec = args.decoderNL
     if args.type == 'bernoulli':
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=True, gaussian=False, beta=beta, Nwu=Nwu)
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size,
+                  bernoulli=True, gaussian=False, beta=beta, Nwu=Nwu, noiseIn=noise, noiseGain=noiseGain)
     elif args.type == 'gaussian':
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
-                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True, beta=beta, Nwu=Nwu)
+                  IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size,
+                  bernoulli=False, gaussian=True, beta=beta, Nwu=Nwu, noiseIn=noise, noiseGain=noiseGain)
     else:
         print("ERROR script: Chose VAE type -> either bernoulli or gaussian")
 
@@ -124,4 +134,24 @@ elif mode == "load":
     # vae.trainVAE(train_loader, epoch_nb)
     # vae.save(datasetName, saveDir)
 
-    vaeLoaded.generate(1000, directory, 50)
+    # print(vaeLoaded.z_mu.data)
+    # print(vaeLoaded.z_logSigma.data)
+    # z_mean = np.zeros(vaeLoaded.decoder.dimZ)
+    # z_var = np.zeros(vaeLoaded.decoder.dimZ)
+    # # z_mean = vaeLoaded.z_mu.data[-1]
+    # for i in range(vaeLoaded.decoder.dimZ):
+    #     z_mean[i] = vaeLoaded.z_mu.data[-1][i]
+    #     z_var[i] = np.exp(vaeLoaded.z_logSigma[-1][i])
+
+    # print(z_mean)
+    # print(z_var)
+    # print(exp(vaeLoaded.z_logSigma))
+    print(vaeLoaded.z_mu)
+    print(vaeLoaded.z_logSigma)
+    for indexDim in range(vaeLoaded.decoder.dimZ):
+
+        subDir = directory + 'z' + \
+            str(indexDim) + '_z' + str((indexDim + 1) %
+                                       vaeLoaded.decoder.dimZ) + '/'
+        vaeLoaded.generate(subDir, indexDim, 200,  (indexDim + 1) %
+                           vaeLoaded.decoder.dimZ, 200)

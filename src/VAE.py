@@ -73,6 +73,9 @@ class VAE(nn.Module):
         recon_loss (list):      reconstruction loss recorder
         regul_loss (list):      regularization loss recorder
 
+        noise_in (bool):        flag on noising input during training
+        nois_gain (float):      noise gain if noising input
+
         created/trained/saved/loaded (bool):
                                 flags on VAE current state
     """
@@ -80,7 +83,7 @@ class VAE(nn.Module):
 #---------------------------------------
 
     def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec,
-                 mb_size=64, beta=1, Nwu=1, lr=1e-3, bernoulli=True, gaussian=False):
+                 mb_size=64, beta=1, Nwu=1, lr=1e-3, bernoulli=True, gaussian=False, noiseIn=False, noiseGain=0.):
         """Create a VAE strucutre by setting all attributes and calling Encoder/Decoder constructors.
 
         Args:
@@ -96,6 +99,9 @@ class VAE(nn.Module):
             Nwu (int):              warm-up time in epochs number (default 50)
             bernoulli (bool):       flag for bernoulli VAE type (default True)
             gaussian (bool):        flag for gaussian VAE type (default False)
+
+            noiseIn (bool):         noise input decoder data when training (default False)
+            noiseGain (float)       noise gain if noiseIn is True (default 0.)
         """
 
         # superclass init
@@ -187,6 +193,9 @@ class VAE(nn.Module):
         self.recon_loss = []
         self.regul_loss = []
 
+        self.noise_in = noiseIn
+        self.noise_gain = noiseGain
+
         # flags on vae creation
         self.created = True
         self.trained = False
@@ -203,6 +212,9 @@ class VAE(nn.Module):
             print "ERROR_VAE_forward: VAE not correctly created"
             return None
         # compute z from X
+        # if wanted noise input during training
+        if (not self.trained) and self.noise_in:
+            X = self.noiseInput(X)
         # the size -1 is inferred from other dimensions
         z = self.encode(X.view(-1, self.encoder.dimX))
         # compute X_sample (or X_mu for gaussian) from z
@@ -261,11 +273,10 @@ class VAE(nn.Module):
                          + self.decoder.bias_mu.repeat(var_h.size(0), 1))
             self.X_logSigma = (torch.mm(var_h, self.decoder.weight_logSigma)
                                + self.decoder.bias_logSigma.repeat(var_h.size(0), 1))
-            log_Sigma_np = self.X_logSigma.data.numpy()
-            mask = log_Sigma_np < -10
-            if mask.any():
-                np.place(log_Sigma_np,mask,-10)
-                self.X_logSigma = Variable(torch.FloatTensor(log_Sigma_np))
+            # To avoid recon loss negative value
+            # for i in range(self.decoder.dimX):
+            #     if self.X_logSigma.data[i] < -1.837877:
+            #         self.X_logSigma.data[i] = -1.837877
         else:
             print("ERROR VAE: wrong decoder type")
             raise
@@ -296,9 +307,9 @@ class VAE(nn.Module):
             recon /= self.mb_size * self.encoder.dimX
         elif self.decoder.gaussian and not self.decoder.bernoulli:
             # Gaussian
-#            X_sigma = torch.exp(self.X_logSigma)
-            firstTerm = self.X_logSigma * np.log(2 * np.pi)
-            secondTerm = ((self.X_mu - X)**2) / self.X_logSigma.exp()
+            X_sigma = torch.exp(self.X_logSigma)
+            firstTerm = torch.log(2 * np.pi * X_sigma)
+            secondTerm = ((self.X_mu - X)**2) / X_sigma
             recon = 0.5 * torch.sum(firstTerm + secondTerm)
             recon /= (self.mb_size * self.encoder.dimX)
         else:
@@ -469,20 +480,27 @@ class VAE(nn.Module):
 
     #---------------------------------------
 
-    def generate(self, frameNb, saveDir, zRange):
-        """Generate samples from decoder. Working only for zdim = 2"""
+    def noiseInput(self, X):
+        return X + Variable(self.noise_gain * torch.randn(1, self.decoder.dimX))
+
+    #---------------------------------------
+
+    def generate(self, saveDir, zIndex1, zRange1,  zIndex2, zRange2):
+        """Generate samples from decoder. Working only for 2 dimensions of z"""
+        if not os.path.exists(saveDir):
+            os.mkdir(saveDir)
 
         self.eval()
         # tensorParamValues = torch.FloatTensor(
         #     frameNb, self.decoder.dimZ).zero_()
         tensorParamValues = torch.FloatTensor(
-            frameNb, self.decoder.dimZ).zero_()
-        for z1Value in range(-zRange, zRange):
-            for i in range(frameNb):
-                # ramp between 0 and 1 for all z dimensions (not enough...)
-                tensorParamValues[i][1] = float(
-                    i * zRange) / float(frameNb) - zRange / 2
-                tensorParamValues[i][0] = z1Value
+            2 * zRange2, self.decoder.dimZ).zero_()
+        for i in range(-zRange1, zRange1):
+            for j in range(2 * zRange2):
+                # print(float(i)/float(zRange1))
+                tensorParamValues[j][zIndex1] = 10 * float(i) / float(zRange1)
+                tensorParamValues[j][zIndex2] = 10 * \
+                    float(j - zRange2) / float(zRange2)
 
             sample = Variable(tensorParamValues)
             self.decode(sample)
@@ -490,8 +508,10 @@ class VAE(nn.Module):
                 image = self.X_sample.cpu()
             elif self.decoder.gaussian and not self.decoder.bernoulli:
                 image = self.X_mu.cpu()
-            save_image(image.data.view(frameNb, self.decoder.dimX),
-                       saveDir + 'z0LinearCenteredRamp' + str(zRange) + '_z1_' + str(z1Value) + '.png')
+            save_image(image.data.view(2 * zRange2, self.decoder.dimX),
+                       saveDir + 'z' + str(zIndex1) +
+                       'valOffset' + str(i + zRange1)
+                       + '_z' + str(zIndex2) + 'rangeCentered' + str(zRange2) + '.png')
 
 #---------------------------- End class VAE -----------------------------------
 
@@ -509,6 +529,8 @@ def loadVAE(vaeSaveName, load_dir):
         print("ERROR_VAE_Load: " + vaeSaveName + " invalid file")
         raise
     vae = torch.load(savefile_path)
+    # if vae from gpu
+    # vae = torch.load(savefile_path, map_location=lambda storage, loc: storage)
 
     # check if vae and vaeSameName match
     paramsFromFilename = getParamsFromName(vaeSaveName)
