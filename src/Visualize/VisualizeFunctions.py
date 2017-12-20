@@ -12,6 +12,7 @@ from scipy.stats import norm
 from sklearn.decomposition import PCA as sklearnPCA
 import numpy as np
 import librosa
+import Annote
 import pyo
 
 # Perform one run of VAE
@@ -64,30 +65,21 @@ def plotRandZ(VAE_test, idx):
     ax2 = fig.add_subplot(414)
     ax2.plot(X_mu[idx+3])
     
-def plotLinearZ(VAE_test, frameNb):
-    VAE_test.eval()
-    for j in range(VAE_test.decoder.dimZ):
-        if j > 5:
-            break
+def plotLinearZ(VAE_test, frameNb, zdim_y, zdim_x, zdim_xrange, outputfolder):
+    for j in range(zdim_xrange):
+        VAE_test.eval()
+    #    for j in range(VAE_test.decoder.dimZ):
         tensorParamValues = torch.FloatTensor(
                 frameNb, VAE_test.decoder.dimZ).zero_()
         for i in range(frameNb):
-            tensorParamValues[i][j] = float(i * 20) / float(frameNb) - 10
+            tensorParamValues[i][zdim_y] = float(i * 20) / float(frameNb) - 10
+            tensorParamValues[i][zdim_x] = float(j * 10) / float(zdim_xrange) - 5
         sample = Variable(tensorParamValues)
         VAE_test.decode(sample)
         image = VAE_test.X_mu.cpu()
-        plt.figure()
-        plt.imshow((image.data.view(frameNb, VAE_test.decoder.dimX)).numpy())
-    
-    tensorParamValues = torch.FloatTensor(
-                frameNb, VAE_test.decoder.dimZ).zero_()
-    for i in range(frameNb):
-        tensorParamValues[i][:] = float(i * 20) / float(frameNb) - 10
-    sample = Variable(tensorParamValues)
-    VAE_test.decode(sample)
-    image = VAE_test.X_mu.cpu()
-    plt.figure()
-    plt.imshow((image.data.view(frameNb, VAE_test.decoder.dimX)).numpy())
+        plt.imsave(outputfolder + 'test_z' + str(zdim_x) + str(j) + '.png',\
+                   (image.data.view(frameNb, VAE_test.decoder.dimX)).numpy()*-1,\
+                   vmin = np.min(image.data.numpy()-1), vmax=np.max(image.data.numpy()*-1))
         
 
 # analyse z=space (Guassian mesh)
@@ -121,6 +113,7 @@ def CreateZMesh(VAE_test):
 
 # visualize with PCA
 def PlotPCA(VAE_test, trainloader, PCAdim, factor, nb_labels):
+    
     dataiter = iter(trainloader)
     sample_dict = dataiter.next()
     labels = sample_dict['label']
@@ -148,20 +141,49 @@ def PlotPCA(VAE_test, trainloader, PCAdim, factor, nb_labels):
     PCA_proj = sklearn_pca.fit_transform(z_mu_ar)
     
     fig = plt.figure(figsize=(12, 8))
-    ax = fig.add_subplot(1,1,1)
+    ax = fig.subplots()
+    x_total = []
+    y_total = []    
+    z_total = []
+    # Loop over all factor increments to create bool array
     for i in range(20):
         bool_ar = label_ar[:,factor] == i
         color_ar = np.random.random_sample((3,))
-        for j in range(len(PCA_proj[bool_ar,0])):
-            x = PCA_proj[bool_ar, 0][j]
-            y = PCA_proj[bool_ar, 1][j]
-            ax.text(x, y, str(i), bbox=dict(color = color_ar, alpha=0.5), fontsize=12)
+        if not len(PCA_proj[bool_ar,0]) == 0:
+            x_ar = np.zeros((len(PCA_proj[bool_ar,0]),1))
+            y_ar = np.zeros((len(PCA_proj[bool_ar,0]),1))
+            s_ar = np.zeros((len(PCA_proj[bool_ar,0]),1))
+            z_ar = np.chararray(x_ar.shape,itemsize=20)
+            
+            # Get all points for one increment (one color) and associated label
+            for j in range(len(PCA_proj[bool_ar,0])):
+                x_ar[j] = PCA_proj[bool_ar, 0][j]
+                y_ar[j] = PCA_proj[bool_ar, 1][j]
+                s_ar[j] = label_ar[j,1]*20
+                z_ar[j] = 'Q=' + str(int(label_ar[j,2])) + ' f=' +  str(int(label_ar[j,3]))
+                #+ ' f3=' + str(int(label_ar[j,2])) + ' f4=' + str(int(label_ar[j,3]))
+            x_ar = x_ar.T.tolist()[0]
+            y_ar = y_ar.T.tolist()[0]
+            z_ar = z_ar.T.tolist()[0]
+            
+            # Plot points and save in total array for labels
+            ax.scatter(x_ar, y_ar, c=color_ar, alpha=0.5, s = s_ar, label=str(i))
+            x_total = x_total + x_ar
+            y_total = y_total + y_ar
+            z_total = z_total + z_ar
+    
+    # Plot scatter and place labels
+    af =  Annote.AnnoteFinder(x_total,y_total, z_total, ax=ax, xtol = 0.1, ytol = 0.1)
+    #fig.canvas.mpl_connect('motion_notify_event', af)
+    fig.canvas.mpl_connect('button_press_event', af)
+    ax.legend()
     add_x = np.std(PCA_proj[:,0])/2
     add_y = np.std(PCA_proj[:,1])/2
     ax.set_xlim(min(PCA_proj[:,0])-add_x*4 ,max(PCA_proj[:,0])+add_x*4)
     ax.set_ylim(min(PCA_proj[:,1])-add_y*4,max(PCA_proj[:,1])+add_y*4)
     
-    plt.show()
+    return label_ar, z_mu_ar, sklearn_pca
+
     
 ###############################  Test 2: Calculate/visualize loss ###############################
     
@@ -281,7 +303,7 @@ def SpecToAudio(X_mu_np, idx, nbFrames, outputpath = ''):
     Nfft = 4096
     S = np.repeat(X_mu_np[idx,:][np.newaxis].T,nbFrames,axis=1)
     S = np.append(S, np.zeros((Nfft/2-S.shape[0]+1,nbFrames)),axis=0)
-    x = griffLim_stft(S)
+    x = griffLim_stft(S)*300
     output_name = 'ReconAudio_'
     librosa.output.write_wav(outputpath + output_name + 'gl.wav', x, 44100)
     
