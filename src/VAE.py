@@ -20,8 +20,8 @@ Todo:
     * error handler
 
 .. Adapted from:
-   http://google.github.io/styleguide/pyguide.html
-
+   https://github.com/wiseodd/generative-models
+   https://github.com/pytorch/examples/tree/master/vae
 """
 
 import os
@@ -34,7 +34,6 @@ import torch.nn.functional as F
 import numpy as np
 from torch import optim
 from torch.autograd import Variable
-
 from torchvision.utils import save_image
 import torch.utils.data
 from torchvision import datasets, transforms
