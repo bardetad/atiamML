@@ -43,12 +43,16 @@ def plotInOut(X_np, X_mu_np, idx):
     fig = plt.figure()
     ax1 = fig.add_subplot(211)
     ax1.plot(images[0])
+    plt.ylabel('Normalized amplitude')
+    plt.title('In- output reconstruction')
     ax2 = fig.add_subplot(212)
-    ax2.plot(images[1])
+    ax2.plot(images[1]) 
+    plt.xlabel('Frequency bin')
+    plt.ylabel('Normalized amplitude')
 
 # analyse z-space (random z)
 def plotRandZ(VAE_test, idx):
-    z = Variable(torch.randn(VAE_test.mb_size, VAE_test.encoder.dimZ))
+    z = Variable(torch.randn(VAE_test.mb_size, VAE_test.encoder.dimZ))*5
     
     VAE_test.decode(z)
     X_mu = VAE_test.X_mu
@@ -56,14 +60,26 @@ def plotRandZ(VAE_test, idx):
     
     # Plot
     fig = plt.figure()
+    
     ax1 = fig.add_subplot(411)
+    plt.title('Random sampling of latent space')
+    ax1.axes.get_xaxis().set_visible(False)
     ax1.plot(X_mu[idx])
-    ax2 = fig.add_subplot(412)
-    ax2.plot(X_mu[idx+1])
-    ax2 = fig.add_subplot(413)
-    ax2.plot(X_mu[idx+2])
-    ax2 = fig.add_subplot(414)
-    ax2.plot(X_mu[idx+3])
+    
+    ax1 = fig.add_subplot(412)
+    ax1.axes.get_xaxis().set_visible(False)
+    ax1.plot(X_mu[idx+1])
+    
+    ax1 = fig.add_subplot(413)
+    plt.ylabel('Amplitude')
+    ax1.axes.get_xaxis().set_visible(False)
+    ax1.plot(X_mu[idx+2])
+    
+    ax1 = fig.add_subplot(414)
+    ax1.plot(X_mu[idx+3])
+    
+    plt.xlabel('Frequency bin')
+    
     
 def plotLinearZ(VAE_test, frameNb, zdim_y, zdim_x, zdim_xrange, outputfolder):
     for j in range(zdim_xrange):
@@ -78,9 +94,12 @@ def plotLinearZ(VAE_test, frameNb, zdim_y, zdim_x, zdim_xrange, outputfolder):
         VAE_test.decode(sample)
         image = VAE_test.X_mu.cpu()
         plt.imsave(outputfolder + 'test_z' + str(zdim_x) + str(j) + '.png',\
-                   (image.data.view(frameNb, VAE_test.decoder.dimX)).numpy()*-1,\
-                   vmin = np.min(image.data.numpy()-1), vmax=np.max(image.data.numpy()*-1))
-        
+                   (image.data.view(frameNb, VAE_test.decoder.dimX)).numpy(),\
+                   vmin = np.min(image.data.numpy()), vmax=np.max(image.data.numpy()))
+    
+#    plt.xlabel('Frequency bin')
+#    plt.ylabel('z-value')
+#    plt.title('Linear variation of one latent space dimension')
 
 # analyse z=space (Guassian mesh)
 def CreateZMesh(VAE_test):
@@ -90,8 +109,8 @@ def CreateZMesh(VAE_test):
     y = norm.ppf(y) 
     x[0,:]= - 2
     y[:,0] = -2
-    x = x.reshape(len(x)**2,)
-    y = y.reshape(len(y)**2,)
+    x = x.reshape(len(x)**2,)*2
+    y = y.reshape(len(y)**2,)*2
     z = np.array([x,y]).T
     if VAE_test.decoder.dimZ > 2:
         # Append zeros for z > 2
@@ -106,13 +125,22 @@ def CreateZMesh(VAE_test):
     
     # Plot
     fig = plt.figure()
+    plt.title('Gaussian mesh sampling of latent space')
+    plt.xlim(-4, 4)
+    plt.ylim(-4, 4)
     for i in range(0,len(x)):
         ax = fig.add_subplot(np.sqrt(len(x)),np.sqrt(len(x)),i+1)
         ax.plot(samples[i,:])
+        ax.set_yticklabels([])
+        ax.set_xticklabels([])
+#        ax.xaxis.set_ticks_position('none')
+#        ax.yaxis.set_ticks_position('none')
+        ax.yaxis.set_major_locator(plt.NullLocator())
+        ax.xaxis.set_major_formatter(plt.NullFormatter())
     fig.show()
 
 # visualize with PCA
-def PlotPCA(VAE_test, trainloader, PCAdim, factor, nb_labels):
+def PlotPCA(VAE_test, trainloader, data_set, PCAdim, factor, nb_labels):
     
     dataiter = iter(trainloader)
     sample_dict = dataiter.next()
@@ -144,45 +172,77 @@ def PlotPCA(VAE_test, trainloader, PCAdim, factor, nb_labels):
     ax = fig.subplots()
     x_total = []
     y_total = []    
-    z_total = []
+    lbl_total = []
+    lbl_4 = ['Inh.', '# Harm.', 'Q','Filter f']
+    lbl_5 = ['Carrier', 'Ratio', 'Index','Q', 'Filter f']
+
+    if labels.shape[1] == 4:
+        factors = range(4)
+        legend_title = lbl_4[factor]
+        factors.remove(factor)
+        lbl_size = factors[0]
+        lbl_lbl1 = factors[1]
+        lbl_lbl2 = factors[2]
+    elif labels.shape[1] == 5:
+        factors = range(5)
+        legend_title = lbl_5[factor]
+        factors.remove(factor)
+        lbl_size = factors[0]
+        lbl_lbl1 = factors[1]
+        lbl_lbl2 = factors[2]
+        lbl_lbl3 = factors[3]
+    else:
+        print('Wrong number of labels')
+        return
     # Loop over all factor increments to create bool array
     for i in range(20):
+        
         bool_ar = label_ar[:,factor] == i
+        
+        
         color_ar = np.random.random_sample((3,))
         if not len(PCA_proj[bool_ar,0]) == 0:
             x_ar = np.zeros((len(PCA_proj[bool_ar,0]),1))
             y_ar = np.zeros((len(PCA_proj[bool_ar,0]),1))
             s_ar = np.zeros((len(PCA_proj[bool_ar,0]),1))
-            z_ar = np.chararray(x_ar.shape,itemsize=20)
+            lbl_ar = np.chararray(x_ar.shape,itemsize=30)
             
             # Get all points for one increment (one color) and associated label
             for j in range(len(PCA_proj[bool_ar,0])):
                 x_ar[j] = PCA_proj[bool_ar, 0][j]
                 y_ar[j] = PCA_proj[bool_ar, 1][j]
-                s_ar[j] = label_ar[j,1]*20
-                z_ar[j] = 'Q=' + str(int(label_ar[j,2])) + ' f=' +  str(int(label_ar[j,3]))
-                #+ ' f3=' + str(int(label_ar[j,2])) + ' f4=' + str(int(label_ar[j,3]))
+                
+                s_ar[j] = label_ar[j,lbl_size]*20
+                if labels.shape[1] == 4:
+                    lbl_ar[j] = lbl_4[lbl_lbl1] + ' =' + str(int(label_ar[j,lbl_lbl1])) + ' ' + lbl_4[lbl_lbl2] + ' =' +  str(int(label_ar[j,lbl_lbl2]))
+                elif labels.shape[1] == 5:
+                    lbl_ar[j] = lbl_5[lbl_lbl1] + ' =' + str(int(label_ar[j,lbl_lbl1])) + ' ' + lbl_5[lbl_lbl2] + ' =' +  str(int(label_ar[j,lbl_lbl2]))  + ' ' + lbl_5[lbl_lbl3] + ' =' +  str(int(label_ar[j,lbl_lbl3]))
+
             x_ar = x_ar.T.tolist()[0]
             y_ar = y_ar.T.tolist()[0]
-            z_ar = z_ar.T.tolist()[0]
+            lbl_ar = lbl_ar.T.tolist()[0]
             
             # Plot points and save in total array for labels
             ax.scatter(x_ar, y_ar, c=color_ar, alpha=0.5, s = s_ar, label=str(i))
             x_total = x_total + x_ar
             y_total = y_total + y_ar
-            z_total = z_total + z_ar
+            lbl_total = lbl_total + lbl_ar
     
     # Plot scatter and place labels
-    af =  Annote.AnnoteFinder(x_total,y_total, z_total, ax=ax, xtol = 0.1, ytol = 0.1)
+    af =  Annote.AnnoteFinder(x_total,y_total, lbl_total, ax=ax, xtol = 0.1, ytol = 0.1)
     #fig.canvas.mpl_connect('motion_notify_event', af)
     fig.canvas.mpl_connect('button_press_event', af)
-    ax.legend()
+    ax.legend(title = legend_title)
     add_x = np.std(PCA_proj[:,0])/2
     add_y = np.std(PCA_proj[:,1])/2
     ax.set_xlim(min(PCA_proj[:,0])-add_x*4 ,max(PCA_proj[:,0])+add_x*4)
     ax.set_ylim(min(PCA_proj[:,1])-add_y*4,max(PCA_proj[:,1])+add_y*4)
+    plt.xlabel('Dim 1 (z)')
+    plt.ylabel('Dim 2 (z)')
+    plt.title('PCA analysis of ' + data_set + ' dataset with ' + str(labels.shape[1]) + ' factors of variation')
+    plt.grid(True)
     
-    return label_ar, z_mu_ar, sklearn_pca
+    return sklearn_pca
 
     
 ###############################  Test 2: Calculate/visualize loss ###############################
@@ -245,7 +305,7 @@ def BPlotLabelLoss(loss_dataset, label_ar, VAE_test):
     ax1.get_xaxis().tick_bottom()
     ax1.get_yaxis().tick_left()
     #ax1.set_xlim(0.5, 4)
-    #ax1.set_ylim(-1, 1)
+    #ax1.set_ylim(-1, 1)    
     plt.show()
 
 # plot loss evolution
@@ -260,6 +320,10 @@ def plotLoss(VAE_test):
     ax.plot(x_axis, loss_vector[0:,1], 'k:', label='Reconstruction loss')
     ax.plot(x_axis, loss_vector[0:,2], 'k', label='Kull/Leib loss')
     ax.legend(loc='upper center', shadow=True)
+    
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss value')
+    plt.title('Loss evolution during VAE training')
     
 def plotLoss_depreciated(model_folder, data_set, data_name, Z_dim):
     loss_vector = np.load(model_folder + data_set + '_' + data_name + str(Z_dim) + 'loss_.npy')

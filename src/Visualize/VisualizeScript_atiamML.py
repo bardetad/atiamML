@@ -28,12 +28,13 @@ model_folder = '/home/bavo/Desktop/results_atiam/'
 data_folder = '/media/bavo/1E84369D843676FD/Users/bavov/Documents/ATIAM/4_Informatique/MachineLearning_Project/Datasets/'
 data_set_ar = ['MDCT', 'Spectrums', 'SpectrumsPhase', ]
 data_name_ar = ['Spectrumsdataset2NormBVK.npz', 'Spectrumsdataset2DbNormBVK.npz'\
-                ,'Spectrumsdataset3NormBVK.npz','SpectrumsPhasedataset3NormBVK.npz']
+                ,'Spectrumsdataset3NormBVK.npz','SpectrumsPhasedataset2NormBVK.npz'\
+                ,'MDCTdataset2Norm_BVK.npz']
 data_set = data_set_ar[1]
 data_name = data_name_ar[2]
 Z_dim = 5
 
-model_name = 'SpectrumsSpectrumsdataset3NormBVK_NPZ_E<1025-relu6-600-muSig-5>_D<5-relu6-600-muSig-1025>_beta4_mb100_lr0dot0001_ep500'
+model_name = 'SpectrumsSpectrumsdataset3NormBVK_NPZ_E<1025-relu6-600-muSig-32>_D<32-relu6-600-muSig-1025>_beta1_mb100_lr0dot0001_ep500'
 VAE_test = loadVAE(model_name, model_folder)
 
 # Load data
@@ -46,16 +47,16 @@ frameNb = 500
 X_np, labels_np, X_mu_np = VF.RunVAEOnce(trainloader, VAE_test)
 
 #%% Plot reconstruction 
-for idx in range(5):
+for idx in range(2):
     VF.plotInOut(X_np, X_mu_np, idx+5)
 
 #%% Plot random z
 VF.plotRandZ(VAE_test, idx)
 
 #%% Plot linear variation of 2 dim of z
-zdim_y = 2
-zdim_x = 3
-zdim_xrange = 100
+zdim_y = 0
+zdim_x = 1
+zdim_xrange = 50
 outputfolder = './imgs/'
 # Chaque image: zdim_y varie de [-10,10] pour #frameNb 
 # Une image per zdim_x qui varie de [-5,5] pour zdim_xrange
@@ -66,9 +67,9 @@ VF.CreateZMesh(VAE_test)
 
 #%% Plot PCA of nb_labels of dataset
 PCAdim = 2
-factor = 3
-nb_labels = 3000
-label_ar, z_mu_ar, sklearn_pca = VF.PlotPCA(VAE_test, trainloader, PCAdim, factor, nb_labels) 
+factor = 0
+nb_labels = 2000
+sklearn_pca = VF.PlotPCA(VAE_test, trainloader, data_set, PCAdim, factor, nb_labels) 
 
 #%%         ########## Visualize loss ##########
 VAE.beta_wu = 1
@@ -79,7 +80,7 @@ VF.BPlotLabelLoss(loss_dataset, label_ar, VAE_test)
 #%%
 
 VF.plotLoss(VAE_test)
-VF.plotLoss_depreciated(model_folder, data_set, data_name, Z_dim)
+#VF.plotLoss_depreciated(model_folder, data_set, data_name, Z_dim)
 #%%         ########## Reconstruct Audio ##########
 
 VF.MoveAudio(data_folder, data_name, labels_np, idx)
