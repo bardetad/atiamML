@@ -2,14 +2,19 @@
 """
 Created on Sun Nov 26 14:10:26 2017
 
-Script to create toy data-set 1 with six latent space factors
-1. Pitch =  70 + exp(i), with i = [0,10,0.5]
-2. Harmonicity = sum(sin((2n+j)*f*i), j = [0,1,0.1]
-3. # Partials k
-4. Noisiness: sig = alpha*sin() + beta*noise()
-5. Filter (Q)
-6. Filter (f)
+Script to create datasets with fixed pitch:
+DATASET 1 (f0 = 1500) FM-synthesisa + Moog filter:
+1. Carrier frequency j (3 carriers)
+2. Ratio k 
+3. Index r
+4. Filter resonance Q
+5. Filter frequency f
 
+DATASET 2 (fundamental = 110) Additive synthesis with BiQuad filter:
+1. Harmonicity = sum(s3.bn/in((2n+j)*f*i), j = [0,1,0.1]
+2. # Partials k
+3. Filter (Q)
+4. Filter (f)
 @author: bavo
 """
 import pyo
