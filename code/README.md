@@ -1,18 +1,25 @@
-# atiamML
-Chemla - Latent representations for real-time synthesis space exploration
-***
-# **Warnings**
-##### Before each commit **run unit tests** in *./unitTest/* folder
+# Code Documentation
+`src/` contains all Modules to create, train, save, load, visualize **Variational autoencoder** (VAE) with the wanted dataset.
+
+   > mainScript.py is the script used either to train a VAE with a `.npz` dataset (see README.md in `../toy`) or load an already trained VAE and do some things like reconstruction analysis, latent space visualization, generation...\
+Creation, training, saving and loading are handled by VAE.py and EncoderDecoder.py.\
+ManageDataset.py in `dataset/` makes the link between the training dataset and the VAE.
+Once the VAE is trained, `Visualize/` folder gives tools and functions to visualize and analyse it.
+
+`data/` is the default folder where trained VAEs are stored\
+`unitTest/` contains helpful simple tests on VAE classes, datasets and analysis to make sure  everything is ok when changes are made in source code
+
+## **Warnings**
+##### Before each commit **run unit tests** in *`./unitTest/`* folder
 ##### Name of datasets **should NOT** contain '_' characters
 ##### **mb-size** needs to be a divider of total dataset length.
-***
-# **Use of mainScript.py**
+
+## **Use of mainScript.py**
 
 ### **Help**
 ```{r, engine='bash', count_lines}
 python mainScript.py --help
 ```
-***
 
 ### 1. Training
  To train a **Gaussian VAE** on *dataset.npz* file of  44800 data , data dim of 1024, z dim of 10, 1-'relu'-layer NN for Encoder and Decoder and save it in *../data/savedVAE/* folder, the total command should be:
@@ -67,16 +74,14 @@ For now it only samples from the first dimension of latent space and create an i
 Example : *../unitTest/dummySaveTest/dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5*
 But very useful as it contains all the info on VAE structure and state at the end of its training.
 
----
-# **Code documentation**
-**TODO**
-
----
-
 # **Unit Testing**
 **TODO**
 
 ---
+
+
+
+
 
 
 
