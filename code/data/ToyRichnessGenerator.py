@@ -34,14 +34,14 @@ PHASE = False    # Boolean to add phase on spectra
 PLOT = False     # Boolean to plot for each new harmonic
 WRITE_WAV = False  # Boolean to write WAV files along the way
 
-folder_path = './DummyDataset/'
+folder_path = '/Users/Leki/Documents/Atiam/Info/ProjectML/ToyDataset3/'
 fond_f = 220                # Fondamental Frequency
 Fe = 44100                   # Sampling rate
 fmax = Fe / 4                 # Maximum frequency authorized
 num_harm = int(fmax / fond_f)  # Number of harmonical partials before fmax
 time_len = 1                # Temporal signal time in seconds
 Nfft = 4096                 # Fourrier transform number of points
-dataset_size = 100        # Desired dataset size
+dataset_size = 10000        # Desired dataset size
 num_gains = dataset_size / num_harm  # Caused number of gains for each harmonic
 
 # Initialize variables
@@ -168,10 +168,10 @@ np.savez(folder_path + 'toy-spectral-richness-v2' + phase_l + 'lin.npz',
 specLinNorm = specLin
 specLinNorm[:Nfft / 4, :] = specLin[:Nfft / 4, :] / \
     np.max(specLin[:Nfft / 4, :])
-# specLinNorm[Nfft / 4:, :] = specLin[Nfft / 4:, :] - \
-#     np.min(specLin[Nfft / 4:, :])
-# specLinNorm[Nfft / 4:, :] = specLin[Nfft / 4:, :] / \
-#     np.max(specLin[Nfft / 4:, :])
+specLinNorm[Nfft / 4:, :] = specLin[Nfft / 4:, :] - \
+    np.min(specLin[Nfft / 4:, :])
+specLinNorm[Nfft / 4:, :] = specLin[Nfft / 4:, :] / \
+    np.max(specLin[Nfft / 4:, :])
 
 toy_dataset_dict = {'Spectrums': specLinNorm, 'labels': Labels}
 np.savez(folder_path + 'toy-spectral-richness-v2-lin' + phase_l + 'norm.npz',
