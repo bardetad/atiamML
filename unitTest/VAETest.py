@@ -396,7 +396,8 @@ class TestVAEFunctions(unittest.TestCase):
 
     def test_VAE_load(self):
         # try to load a vae
-        vae = loadVAE('dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5',
+        vae = loadVAE('dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>\
+                    _D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5',
                       './dummySaveTest/')
         self.assertTrue(vae.created and vae.loaded)
 
@@ -424,8 +425,9 @@ class TestVAEVisualize(unittest.TestCase):
 
     def test_VAE_PCA(self):
         # try to load a vae
-        vaeLoaded = loadVAE('dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5',\
-                './dummySaveTest/')
+        vaeLoaded = loadVAE('dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>\
+                            _D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5',
+                            './dummySaveTest/')
         test = numpy.load("./dummyDataset/dummyDataset98.npz")
         # vaeLoaded = loadVAE('toy-spectral-richness-v2-lin_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta3_mb100_lr0dot001_ep400',
         #                     "../data/savedVAE/Alexis-nonNorm/beta3/WU100/")

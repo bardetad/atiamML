@@ -24,9 +24,9 @@ parser.add_argument('-mode', type=str, default='train', metavar='boolean',
                     \n "train": train a vae from scratch.\
                     \n "load": load (from savefile) a vae already trained and visualize outputs')
 parser.add_argument('-vae-path', type=str,
-                    default='../data/dummySave/\
-                    dummyDataset100Gaussian_NPZ_E<1024-relu6-600-muSig-1>\
-                    _D<1-relu6-600-muSig-1024>_beta4_mb50_lr0dot001_e10')
+                    default='../unitTest/dummySaveTest/\
+                    dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>\
+                    _D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5')
 
 # VAE dimensions
 parser.add_argument('-encoderIOdims', nargs='+', type=int, metavar='int list',
@@ -47,9 +47,9 @@ parser.add_argument('-type', type=str, default='gaussian', metavar='bernoulli/ga
                     help='chose type of vae: either gaussian or bernoulli (default: "gaussian")')
 
 # load Dataset and save VAE state settings
-parser.add_argument('-dataset-path', type=str, default='../data/dummyDataset100.npz',
+parser.add_argument('-dataset-path', type=str, default='../data/dummyDataset98.npz',
                     metavar='path', help='datasetName.npz file path \
-                    (default: "../data/dummyDataset100.npz")')
+                    (default: "../data/dummyDataset98.npz")')
 parser.add_argument('-dataKey', type=str, default='images',
                     metavar='key', help='key for data in .npz dataset (default: "images")')
 parser.add_argument('-save-path', type=str, default='../data/dummySave/',

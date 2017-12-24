@@ -38,7 +38,7 @@ python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -enco
 will by default load this dataset. At the end of the training, the VAE is saved into the default save path *../data/dummySave*
 Bernoulli equivalent :
 ```{r, engine='bash', count_lines}
-python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" "sigmoid" -type "bernoulli"
+python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" "sigmoid" -type "bernoulli" -mb-size
 ```
 **More flags**
 - Warm-up (in number of epochs)
