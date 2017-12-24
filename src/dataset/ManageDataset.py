@@ -14,7 +14,6 @@ class NPZ_Dataset(Dataset):
 
     def __init__(self, npz_file, root_dir, dataName='Spectrums', transform=None):
 
-
         self.dataset_name = npz_file
         self.root_dir = root_dir
         self.path = self.root_dir + self.dataset_name
@@ -33,7 +32,7 @@ class NPZ_Dataset(Dataset):
     def __getitem__(self, idx):
         image = self.imgs_stack[:, idx]
         try:
-            label = self.labels_stack[:,idx]
+            label = self.labels_stack[:, idx]
             singleData = {'image': image, 'label': label}
         except:
             singleData = {'image': image}
@@ -41,4 +40,4 @@ class NPZ_Dataset(Dataset):
 
     # returns the size of the dataset
     def __len__(self):
-        return len(self.imgs_stack[0,:])
+        return len(self.imgs_stack[0, :])
