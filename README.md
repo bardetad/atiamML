@@ -33,12 +33,12 @@ python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -enco
 An **immediate test** is to train a VAE  on a dummy dataset of filepath *../data/dummyDataset98.npz* . It's composed of 100 spectra of length 1024. 
 The command:
 ```{r, engine='bash', count_lines}
-python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" -mb-size 49 
+python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" -mb-size 49 -dataKey "Spectrums"
 ```
 will by default load this dataset. At the end of the training, the VAE is saved into the default save path *../data/dummySave*
 Bernoulli equivalent :
 ```{r, engine='bash', count_lines}
-python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" "sigmoid" -type "bernoulli" -mb-size
+python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" "sigmoid" -type "bernoulli" -mb-size 49 -dataKey "Spectrums"
 ```
 **More flags**
 - Warm-up (in number of epochs)
