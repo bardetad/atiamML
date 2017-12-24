@@ -1,4 +1,13 @@
-# main script to define and train VAE in a single python command
+"""mainScript.py
+
+The main script to define and train VAE in a single python command
+Use: See README.md
+
+SCRIPT MODES:
+    "train": train a vae from scratch.
+    "load": load (from savefile) a vae already trained and visualize/analyse/generate outputs
+"""
+
 import sys
 import argparse
 
@@ -11,10 +20,6 @@ import numpy as np
 from VAE import VAE
 from VAE import loadVAE
 from ManageDataset import NPZ_Dataset
-
-# SCRIPT MODES:
-# if "train": train a vae from scratch.
-# if "load": load (from savefile) a vae already trained and visualize outputs
 
 parser = argparse.ArgumentParser(description='generic VAE training and saving')
 
@@ -117,8 +122,6 @@ if mode == "train":
     # save it
     vae.save(datasetName, saveDir)
 
-    vae.generate(10000, saveDir)
-
 elif mode == "load":
 
     # get savefile path
@@ -128,26 +131,11 @@ elif mode == "load":
     # load vae
     vaeLoaded = loadVAE(savefile, directory)
 
-    # retrain
-    # train_loader = torch.utils.data.DataLoader(
-    # testDataset, batch_size=vae.mb_size, shuffle=True)
-    # vae.trainVAE(train_loader, epoch_nb)
-    # vae.save(datasetName, saveDir)
-
-    # print(vaeLoaded.z_mu.data)
-    # print(vaeLoaded.z_logSigma.data)
-    # z_mean = np.zeros(vaeLoaded.decoder.dimZ)
-    # z_var = np.zeros(vaeLoaded.decoder.dimZ)
-    # # z_mean = vaeLoaded.z_mu.data[-1]
-    # for i in range(vaeLoaded.decoder.dimZ):
-    #     z_mean[i] = vaeLoaded.z_mu.data[-1][i]
-    #     z_var[i] = np.exp(vaeLoaded.z_logSigma[-1][i])
-
-    # print(z_mean)
-    # print(z_var)
-    # print(exp(vaeLoaded.z_logSigma))
-    print(vaeLoaded.z_mu)
-    print(vaeLoaded.z_logSigma)
+    # Now do some stuff (e.g. PCA, t-sne, generate ...)
+    # Here for example it generates 200 images. Each image is 200x1024.
+    # It corresponds to 200 stacked spectra (of size 1024).
+    # Hence, x axis corresponds to frequency while y axis is a latent dimension varying from -10 to 10.
+    # When changing image it varies another latent dimension also from -10 to 10.
     for indexDim in range(vaeLoaded.decoder.dimZ):
 
         subDir = directory + 'z' + \
