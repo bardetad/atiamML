@@ -2,11 +2,13 @@
 """
 Created on Sun Nov 26 15:53:22 2017
 
-Script to create .npz file containing all spectrograms of toydataset. It creates a dictionary
-with a 3D numpy matrix (513x12xlength(dataset)) and associated labels. (TODO: label-values)
+Script to create .npz file containing all spectrums of dataset. It creates a dictionary
+with a 2D numpy matrix and associated labels. One can choose to create spectra, spectra + phase or MDCT input.
+Dataset 1 (additive) = 22000 items
+Dataset 2 (FM) =  44800 items
 Keys:
-- ['images']: the 2D matrix with spectrograms
-- ['labels']: an array containing the labels associated to every spectrogram
+- ['images']: the 2D matrix with spectrums (ex. for dataset 1, spectra: 1025x22000; spectra + phase = 2050x22000, MDCT = 1024x22000)
+- ['labels']: an array containing the labels associated to every spectrum (for dataset 1: 4x22000, for dataset 2: 5x44800)
 
 @author: bavo
 """
