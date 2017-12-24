@@ -1,3 +1,13 @@
+"""VAETest.py
+
+This module gives unit testing classes for VAE creation, training, generation and save/load.
+
+Todo:
+    * add tests on loading
+    * add tests on parsing bash command (see mainScript.py)
+    * add tests on visualization
+"""
+
 import unittest
 import sys
 import os
@@ -5,6 +15,7 @@ import shutil
 # Add the src folder path to the sys.path list
 sys.path.append('../src')
 sys.path.append('../src/dataset')
+sys.path.append('../src/Visualize')
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -20,12 +31,19 @@ from torchvision import datasets, transforms
 from VAE import VAE
 from VAE import loadVAE
 from ManageDataset import NPZ_Dataset
+from PCA import PCA_reduction, PCA_vision
+from tsne import Hbeta, x2p, tsne
 
 
 mnist = input_data.read_data_sets('../MNIST_data', one_hot=True)
 
 
+#---------------------------- Begin class TestVAECreation ----------------
+
 class TestVAECreation(unittest.TestCase):
+    """Tests VAE creation."""
+
+    #---------------------------------------
 
     def test_good_VAE(self):
         X_dim = 513
@@ -38,6 +56,8 @@ class TestVAECreation(unittest.TestCase):
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertTrue(model.created)
 
+    #---------------------------------------
+
     def test_wrong_EncoderStructure(self):
         X_dim = 513
         Z_dim = 6
@@ -48,6 +68,8 @@ class TestVAECreation(unittest.TestCase):
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
+
+    #---------------------------------------
 
     def test_wrong_DecoderStructure(self):
         X_dim = 513
@@ -60,6 +82,8 @@ class TestVAECreation(unittest.TestCase):
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
+    #---------------------------------------
+
     def test_wrong_EncoderNLFunctionsNb(self):
         X_dim = 513
         Z_dim = 6
@@ -70,6 +94,8 @@ class TestVAECreation(unittest.TestCase):
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
+
+    #---------------------------------------
 
     def test_wrong_DecoderNLFunctionsNb(self):
         X_dim = 513
@@ -82,6 +108,8 @@ class TestVAECreation(unittest.TestCase):
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
+    #---------------------------------------
+
     def test_wrong_EncoderNLfunctionsSyntax(self):
         X_dim = 513
         Z_dim = 6
@@ -92,6 +120,8 @@ class TestVAECreation(unittest.TestCase):
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
+
+    #---------------------------------------
 
     def test_wrong_DecoderNLfunctionsSyntax(self):
         X_dim = 513
@@ -104,6 +134,8 @@ class TestVAECreation(unittest.TestCase):
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec)
         self.assertFalse(model.created)
 
+    #---------------------------------------
+
     def test_good_gaussianVAE(self):
         X_dim = 513
         Z_dim = 6
@@ -114,6 +146,8 @@ class TestVAECreation(unittest.TestCase):
         model = VAE(X_dim, Z_dim, IOh_dims_Enc,
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec, bernoulli=False, gaussian=True)
         self.assertTrue(model.created)
+
+    #---------------------------------------
 
     def test_wrong_gaussianVAE(self):
         X_dim = 513
@@ -126,8 +160,15 @@ class TestVAECreation(unittest.TestCase):
                     IOh_dims_Dec, NL_types_Enc, NL_types_Dec, bernoulli=False, gaussian=True)
         self.assertFalse(model.created)
 
+#---------------------------- End class TestVAECreation ------------------
+
+#---------------------------- Begin class TestVAEFunctions ---------------
+
 
 class TestVAEFunctions(unittest.TestCase):
+    """Tests VAE training, saving and loading."""
+
+    #---------------------------------------
 
     def test_VAE_lonelyForward(self):
         mb_size = 64
@@ -153,6 +194,8 @@ class TestVAEFunctions(unittest.TestCase):
         vae.decoder.getInfo()
         self.assertTrue(vae.created and (
             out.size()[1] == X_dim and out.size()[0] == mb_size))
+
+    #---------------------------------------
 
     def test_bernoulliVAE_Learning(self):
         mb_size = 1
@@ -183,12 +226,12 @@ class TestVAEFunctions(unittest.TestCase):
             elif vae.decoder.bernoulli:
                 vae(X)
                 out = vae.X_sample
-            else: 
+            else:
                 raise
             loss, _, _ = vae.loss(X)
             if i == 0:
                 initialLoss = loss.data[0]
-            if(i%10 == 0):
+            if(i % 10 == 0):
                 print("Loss -> " + str(loss.data[0]))
             loss.backward()
             optimizer.step()
@@ -203,6 +246,8 @@ class TestVAEFunctions(unittest.TestCase):
                                         repeat_delay=1000)
 
         plt.show()
+
+    #---------------------------------------
 
     def test_gaussianVAE_Learning(self):
         mb_size = 1
@@ -233,12 +278,12 @@ class TestVAEFunctions(unittest.TestCase):
             elif vae.decoder.bernoulli:
                 vae(X)
                 out = vae.X_sample
-            else: 
+            else:
                 raise
             loss, _, _ = vae.loss(X)
             if i == 0:
                 initialLoss = loss.data[0]
-            if(i%10 == 0):
+            if(i % 10 == 0):
                 print("Loss -> " + str(loss.data[0]))
             loss.backward()
             optimizer.step()
@@ -256,15 +301,17 @@ class TestVAEFunctions(unittest.TestCase):
 
         self.assertTrue(vae.created and (loss.data[0] < 100))
 
+    #---------------------------------------
+
     def test_VAE_trainLoop(self):
-        mb_size = 10
+        mb_size = 49  # because dummyDataset98.npz is a 98 data size
         epoch_nb = 10
 
         # define dataset
-        datasetName = 'dummyDataset100.npz'
+        datasetName = 'dummyDataset98.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'images')
+                                  datasetDir, 'Spectrums')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
 
@@ -281,13 +328,15 @@ class TestVAEFunctions(unittest.TestCase):
         vae.trainVAE(train_loader, epoch_nb)
         self.assertTrue(vae.created and vae.trained)
 
+    #---------------------------------------
+
     def test_VAE_saveState(self):
-        mb_size = 10
+        mb_size = 49  # because dummyDataset98.npz is a 98 data size
         epoch_nb = 11
-        datasetName = 'dummyDataset100.npz'
+        datasetName = 'dummyDataset98.npz'
         datasetDir = './dummyDataset/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'images')
+                                  datasetDir, 'Spectrums')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
 
@@ -306,11 +355,13 @@ class TestVAEFunctions(unittest.TestCase):
         if vae.trained:
             vae.save(datasetName, datasetDir)
 
-        self.assertTrue(vae.created and 
-            vae.trained and vae.saved)
+        self.assertTrue(vae.created and
+                        vae.trained and vae.saved)
+
+    #---------------------------------------
 
     def test_gaussianVAE_trainsaveload(self):
-        mb_size = 10
+        mb_size = 49  # because dummyDataset98.npz is a 98 data size
         epoch_nb = 5
         # if exists remove 'saveloadTest' folder
         if os.path.exists('./saveloadTest'):
@@ -325,11 +376,11 @@ class TestVAEFunctions(unittest.TestCase):
         vae = VAE(X_dim, Z_dim, IOh_dims_Enc,
                   IOh_dims_Dec, NL_types_Enc, NL_types_Dec, mb_size, bernoulli=False, gaussian=True)
         # prepare dataset
-        datasetName = 'dummyDataset100.npz'
+        datasetName = 'dummyDataset98.npz'
         datasetDir = './dummyDataset/'
         saveDir = './dummySaveTest/'
         testDataset = NPZ_Dataset(datasetName,
-                                  datasetDir, 'images')
+                                  datasetDir, 'Spectrums')
         train_loader = torch.utils.data.DataLoader(
             testDataset, batch_size=mb_size, shuffle=True)
         # train it for 10 epochs
@@ -344,17 +395,72 @@ class TestVAEFunctions(unittest.TestCase):
         self.assertTrue(vae.created and vae.loaded and vae.saved)
 
     def test_VAE_load(self):
-        #try to load a vae
-        vae = loadVAE('dummyDataset100_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta4_mb10_lr0dot001_ep10',\
-                './dummySaveTest/')
+        # try to load a vae
+        vae = loadVAE('dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5',
+                      './dummySaveTest/')
         self.assertTrue(vae.created and vae.loaded)
+
+    #---------------------------------------
 
     # def test_VAE_invalidLoad(self):
 
+    #---------------------------------------
+
     # def test_VAE_invalidEpochNb(self):
+
+    #---------------------------------------
 
     # def test_VAE_loadWrongFile(self):
 
+#---------------------------- End class TestVAEFunctions -----------------
+
+#---------------------------- Begin class TestVAEVisualize ---------------
+
+
+class TestVAEVisualize(unittest.TestCase):
+    """Test VAE visualization (PCA and t-SNE)."""
+
+    #---------------------------------------
+
+    def test_VAE_PCA(self):
+        # try to load a vae
+        vaeLoaded = loadVAE('dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5',\
+                './dummySaveTest/')
+        test = numpy.load("./dummyDataset/dummyDataset98.npz")
+        # vaeLoaded = loadVAE('toy-spectral-richness-v2-lin_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta3_mb100_lr0dot001_ep400',
+        #                     "../data/savedVAE/Alexis-nonNorm/beta3/WU100/")
+        # test = numpy.load("../data/toy-spectral-richness-v2-lin.npz")
+        spec = test['Spectrums']
+        lbl = test['labels']
+
+        lbltest = []
+        lbltest = lbl[:, 0:98:]
+        spec = spec[:, 0:98]
+        print(len(lbltest[0, :]))
+
+        spec = torch.from_numpy(spec)
+        spec = spec.float()
+        spec = spec.t()
+        lblarr = numpy.array(lbltest)
+
+        spec = Variable(spec)
+
+        z_res = vaeLoaded.encode(spec)
+        z_res = z_res.data
+        z_res = z_res.double()
+
+        PCA_vision(z_res, lblarr, 0)
+        plt.figure()
+
+        z_res = z_res.numpy()
+
+        Y = tsne(z_res, 2, 10)
+        plt.scatter(Y[:, 0], Y[:, 1], 20, lblarr[0])
+        plt.show()
+
+        self.assertTrue(vaeLoaded.loaded)
+
+#---------------------------- Test suites ------------------------------------
 
 suiteVAECreation = unittest.TestLoader().loadTestsFromTestCase(TestVAECreation)
 print "\n\n------------------- VAE Creation Test Suite -------------------\n"
@@ -362,3 +468,6 @@ unittest.TextTestRunner(verbosity=2).run(suiteVAECreation)
 suiteVAEFunctions = unittest.TestLoader().loadTestsFromTestCase(TestVAEFunctions)
 print "\n\n------------------- VAE functions Test Suite -------------------\n"
 unittest.TextTestRunner(verbosity=2).run(suiteVAEFunctions)
+suiteVAEVisualize = unittest.TestLoader().loadTestsFromTestCase(TestVAEVisualize)
+print "\n\n------------------- VAE visualization Test Suite -------------------\n"
+unittest.TextTestRunner(verbosity=2).run(suiteVAEVisualize)

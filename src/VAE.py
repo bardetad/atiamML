@@ -79,7 +79,7 @@ class VAE(nn.Module):
                                 flags on VAE current state
     """
 
-#---------------------------------------
+    #---------------------------------------
 
     def __init__(self, X_dim, Z_dim, IOh_dims_Enc, IOh_dims_Dec, NL_types_Enc, NL_types_Dec,
                  mb_size=64, beta=1, Nwu=1, lr=1e-3, bernoulli=True, gaussian=False, noiseIn=False, noiseGain=0.):

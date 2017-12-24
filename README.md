@@ -30,10 +30,10 @@ python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -enco
 python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" "sigmoid" -type "bernoulli" -dataset-path "../data/dataset.npz" -save-path "../data/savedVAE/" 
 ```
 
-An **immediate test** is to train a VAE  on a dummy dataset of filepath *../data/dummyDataset100.npz* . It's composed of 100 spectra of length 1024. 
+An **immediate test** is to train a VAE  on a dummy dataset of filepath *../data/dummyDataset98.npz* . It's composed of 100 spectra of length 1024. 
 The command:
 ```{r, engine='bash', count_lines}
-python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" 
+python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -encoderNL "relu6" -decoderNL "relu6" -mb-size 49 
 ```
 will by default load this dataset. At the end of the training, the VAE is saved into the default save path *../data/dummySave*
 Bernoulli equivalent :
@@ -57,14 +57,14 @@ Instead of using the default mode **"train"** in command, use the mode **"load"*
 -mode "load"
 ```
 ```{r, engine='bash', count_lines}
-python mainScript.py -mode "load" -vae-path "../data/dummySave/dummyDataset100_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta4_mb10_lr0dot001_ep10"
+python mainScript.py -mode "load" -vae-path "../unitTest/dummySaveTest/dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5"
 ```
 The above command load the VAE saved from the previous training on the dummy dataset. 
 For now it only samples from the first dimension of latent space and create an image of spectra through the linear evolution of z[0].
-**TODO** - add tools of visualiztion.
+**TODO** - add tools of visualization.
 
 **NB** - the save name of the VAE after training is very heavy.
-Example : *../data/dummySave/dummyDataset100_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta4_mb10_lr0dot001_ep10*
+Example : *../unitTest/dummySaveTest/dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5*
 But very useful as it contains all the info on VAE structure and state at the end of its training.
 
 ---
