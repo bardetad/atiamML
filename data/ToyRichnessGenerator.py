@@ -32,144 +32,147 @@ import soundfile as sf
 
 PHASE = False    # Boolean to add phase on spectra
 PLOT = False     # Boolean to plot for each new harmonic
-WRITE_WAV = False # Boolean to write WAV files along the way
+WRITE_WAV = False  # Boolean to write WAV files along the way
 
 folder_path = '/Users/Leki/Documents/Atiam/Info/ProjectML/ToyDataset3/'
 fond_f = 220                # Fondamental Frequency
-Fe =44100                   # Sampling rate
-fmax = Fe/4                 # Maximum frequency authorized
-num_harm = int(fmax/fond_f) # Number of harmonical partials before fmax
+Fe = 44100                   # Sampling rate
+fmax = Fe / 4                 # Maximum frequency authorized
+num_harm = int(fmax / fond_f)  # Number of harmonical partials before fmax
 time_len = 1                # Temporal signal time in seconds
 Nfft = 4096                 # Fourrier transform number of points
 dataset_size = 10000        # Desired dataset size
-num_gains = dataset_size/num_harm # Caused number of gains for each harmonic
+num_gains = dataset_size / num_harm  # Caused number of gains for each harmonic
 
-
-                        # Initialize variables
+# Initialize variables
 #______________________________________________________________________________
-                        
-t = np.linspace(0,1,np.ceil(time_len*Fe))      # Time vector
 
-if PHASE == True :
-    Spectrums = np.zeros([Nfft/4*2,dataset_size]) # Output 1
-else :
-    Spectrums = np.zeros([Nfft/4,dataset_size])    
+t = np.linspace(0, 1, np.ceil(time_len * Fe))      # Time vector
 
-Labels = np.zeros((2,dataset_size))               # Output 2
+if PHASE == True:
+    Spectrums = np.zeros([Nfft / 4 * 2, dataset_size])  # Output 1
+else:
+    Spectrums = np.zeros([Nfft / 4, dataset_size])
+
+Labels = np.zeros((2, dataset_size))               # Output 2
 
 
-yout = np.sin(2*np.pi*fond_f*t) # Temporal signal, initialised at a pure
-                                # sine wave at fond_f Hz
+yout = np.sin(2 * np.pi * fond_f * t)  # Temporal signal, initialised at a pure
+# sine wave at fond_f Hz
 
-if WRITE_WAV :
+if WRITE_WAV:
     sf.write(folder_path + '0_sinus_0.wav', yout, Fe)
-    
+
 # Compute Magnitude Spectrum
-spectrum_temp = yout[0:Nfft]*np.hanning(Nfft)
-spectrum_temp = np.fft.fft(spectrum_temp,Nfft)
-modules_temp = 20*np.log10(np.abs(spectrum_temp))
-modules_temp = modules_temp[0:Nfft/4]
+spectrum_temp = yout[0:Nfft] * np.hanning(Nfft)
+spectrum_temp = np.fft.fft(spectrum_temp, Nfft)
+modules_temp = 20 * np.log10(np.abs(spectrum_temp))
+modules_temp = modules_temp[0:Nfft / 4]
 
 if PHASE == True:
     phases_temp = np.angle(spectrum_temp)
-    Spectrums[Nfft/4:,0] = phases_temp[0:Nfft/4]
-    
-Spectrums[:Nfft/4,0] = modules_temp
+    Spectrums[Nfft / 4:, 0] = phases_temp[0:Nfft / 4]
+
+Spectrums[:Nfft / 4, 0] = modules_temp
 
 
-Labels[0,0] = 1
-Labels[1,0] = 1
+Labels[0, 0] = 1
+Labels[1, 0] = 1
 
-                            # Iterate on harmonics
+# Iterate on harmonics
 #______________________________________________________________________________
 
 inc = 0
-for harmonic in range(2,num_harm+1):
+for harmonic in range(2, num_harm + 1):
     yprev = yout
-    
+
     # Ploting
-    if PLOT :
-        plt.plot(10**(Spectrums[:,inc]/20))    # Plot in linear
+    if PLOT:
+        plt.plot(10**(Spectrums[:, inc] / 20))    # Plot in linear
         plt.show()
-        
-    for harmonic_gain in range(1,num_gains+1):
+
+    for harmonic_gain in range(1, num_gains + 1):
         inc = inc + 1
-        
+
         # Applying gain
-        gain = float(harmonic_gain)/num_gains   # value in [1/num_gains; 1]
-        gain = gain/harmonic                    # 1/n spectral slope
-        gain = float(int(gain*10**4)*10**(-4)); # Precision reduction
-        ytemp = gain*np.sin(2*np.pi*fond_f*harmonic*t)   
-        
+        gain = float(harmonic_gain) / num_gains   # value in [1/num_gains; 1]
+        gain = gain / harmonic                    # 1/n spectral slope
+        gain = float(int(gain * 10**4) * 10**(-4))  # Precision reduction
+        ytemp = gain * np.sin(2 * np.pi * fond_f * harmonic * t)
+
         # Adding previous and normalizing
-        yout = yprev + ytemp   
-        yout = yout/max(abs(yout))                  
-        
-        
-        if WRITE_WAV : 
-            sf.write(folder_path + str(Labels[:,inc]) + '.wav', yout, Fe)
-        
+        yout = yprev + ytemp
+        yout = yout / max(abs(yout))
+
+        if WRITE_WAV:
+            sf.write(folder_path + str(Labels[:, inc]) + '.wav', yout, Fe)
+
         # Compute Magnitude Spectrum
-        spectrum_temp = yout[0:Nfft]*np.hanning(Nfft)
-        spectrum_temp = np.fft.fft(spectrum_temp,Nfft)
-        modules_temp = 20*np.log10(np.abs(spectrum_temp))
-        modules_temp = modules_temp[0:Nfft/4]
-        
+        spectrum_temp = yout[0:Nfft] * np.hanning(Nfft)
+        spectrum_temp = np.fft.fft(spectrum_temp, Nfft)
+        modules_temp = 20 * np.log10(np.abs(spectrum_temp))
+        modules_temp = modules_temp[0:Nfft / 4]
+
         # Compute Phase Spectrum
         if PHASE == True:
             phases_temp = np.angle(spectrum_temp)
-            phases_temp = phases_temp[0:Nfft/4]
-            Spectrums[Nfft/4:,inc] = phases_temp
-            
+            phases_temp = phases_temp[0:Nfft / 4]
+            Spectrums[Nfft / 4:, inc] = phases_temp
+
         # Store in numpy array
-        Spectrums[:Nfft/4,inc] = modules_temp
-        Labels[0,inc] = harmonic
-        Labels[1,inc] = gain*harmonic
-        
-Spectrums = Spectrums[:,:inc]   # Keep only the computed spectrums
+        Spectrums[:Nfft / 4, inc] = modules_temp
+        Labels[0, inc] = harmonic
+        Labels[1, inc] = gain * harmonic
 
+Spectrums = Spectrums[:, :inc]   # Keep only the computed spectrums
 
-                                #Save to npz file 
+# Save to npz file
 #______________________________________________________________________________
 
-## positive dB
+# positive dB
 specPos = np.zeros(np.shape(Spectrums))
 phase_l = '-'
-if PHASE :
-    phase_l = '-phase-' 
-    specPos[Nfft/4:,:] = Spectrums[Nfft/4:,:]
-    
-specPos[:Nfft/4,:] = Spectrums[:Nfft/4,:] - np.min(Spectrums[:Nfft/4,:])
+if PHASE:
+    phase_l = '-phase-'
+    specPos[Nfft / 4:, :] = Spectrums[Nfft / 4:, :]
+
+specPos[:Nfft / 4, :] = Spectrums[:Nfft / 4, :] - \
+    np.min(Spectrums[:Nfft / 4, :])
 toy_dataset_dict = {'Spectrums': specPos, 'labels': Labels}
-np.savez(folder_path + 'toy-spectral-richness-v2-db' + phase_l + 'pos.npz', \
+np.savez(folder_path + 'toy-spectral-richness-v2-db' + phase_l + 'pos.npz',
          **toy_dataset_dict)
 
-## dB normalized 
+# dB normalized
 specDbNorm = specPos
-specDbNorm[:Nfft/4,:] = specPos[:Nfft/4,:]/np.max(specPos[:Nfft/4,:])
+specDbNorm[:Nfft / 4, :] = specPos[:Nfft / 4, :] / \
+    np.max(specPos[:Nfft / 4, :])
 toy_dataset_dict = {'Spectrums': specDbNorm, 'labels': Labels}
-np.savez(folder_path + 'toy-spectral-richness-v2-db' + phase_l + 'norm.npz', \
+np.savez(folder_path + 'toy-spectral-richness-v2-db' + phase_l + 'norm.npz',
          **toy_dataset_dict)
 
-## linear
+# linear
 specLin = np.zeros(np.shape(Spectrums))
-specLin[:Nfft/4,:] = 10**(Spectrums[:Nfft/4,:]/20)
+specLin[:Nfft / 4, :] = 10**(Spectrums[:Nfft / 4, :] / 20)
 
-if PHASE :
-    specLin[Nfft/4:,:] = Spectrums[Nfft/4:,:] - np.min(Spectrums[Nfft/4:,:])
-    specLin[Nfft/4:,:] = specLin[Nfft/4:,:]* \
-    np.max(specLin[:Nfft/4,:])/np.max(specLin[Nfft/4:,:])
-    
+if PHASE:
+    specLin[Nfft / 4:, :] = Spectrums[Nfft / 4:, :] - \
+        np.min(Spectrums[Nfft / 4:, :])
+    specLin[Nfft / 4:, :] = specLin[Nfft / 4:, :] * \
+        np.max(specLin[:Nfft / 4, :]) / np.max(specLin[Nfft / 4:, :])
+
 toy_dataset_dict = {'Spectrums': specLin, 'labels': Labels}
-np.savez(folder_path + 'toy-spectral-richness-v2' + phase_l + 'lin.npz', \
+np.savez(folder_path + 'toy-spectral-richness-v2' + phase_l + 'lin.npz',
          **toy_dataset_dict)
 
-## linear normalized
+# linear normalized
 specLinNorm = specLin
-specLinNorm[:Nfft/4,:] = specLin[:Nfft/4,:]/np.max(specLin[:Nfft/4,:])
-specLinNorm[Nfft/4:,:] = specLin[Nfft/4:,:]-np.min(specLin[Nfft/4:,:])
-specLinNorm[Nfft/4:,:] = specLin[Nfft/4:,:]/np.max(specLin[Nfft/4:,:])
+specLinNorm[:Nfft / 4, :] = specLin[:Nfft / 4, :] / \
+    np.max(specLin[:Nfft / 4, :])
+specLinNorm[Nfft / 4:, :] = specLin[Nfft / 4:, :] - \
+    np.min(specLin[Nfft / 4:, :])
+specLinNorm[Nfft / 4:, :] = specLin[Nfft / 4:, :] / \
+    np.max(specLin[Nfft / 4:, :])
 
 toy_dataset_dict = {'Spectrums': specLinNorm, 'labels': Labels}
-np.savez(folder_path + 'toy-spectral-richness-v2-lin' + phase_l + 'norm.npz', \
+np.savez(folder_path + 'toy-spectral-richness-v2-lin' + phase_l + 'norm.npz',
          **toy_dataset_dict)
