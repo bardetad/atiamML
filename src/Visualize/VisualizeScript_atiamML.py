@@ -3,6 +3,18 @@
 """
 Created on Wed Dec  6 15:36:40 2017
 
+This script lists the different functions from 'VisualizeFunctions.py' using a herein defined and loaded dataset/VAE model.
+To use this script, one only needs to load a model and can then subsequently run this script's code sections.
+Functions are separated in three parts:
+1. Visualize In/out (for reconstruction, run the VAE model with input data and see what comes out)
+- Direct in/out reconstruction
+- Random sampling of z-space
+- Create a number of .png images with one constant z-dim value and one z-dim varying over 500 values 
+- Creates a Gaussian mesh of samples z-values between -4 and 4
+- Performs PCA using nb_labels points for z-dim factor (= labels column number)
+2. Visualize loss evolution
+3. Reconstruct Audio
+
 @author: bavo
 """
 
@@ -54,6 +66,7 @@ for idx in range(2):
 VF.plotRandZ(VAE_test, idx)
 
 #%% Plot linear variation of 2 dim of z
+# ATTENTION: creates zdim_xrange number of .png files
 zdim_y = 0
 zdim_x = 1
 zdim_xrange = 50
