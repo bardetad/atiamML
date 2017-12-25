@@ -89,7 +89,7 @@ Plots are not in **mainScript.py** but they are easy to add. For more details se
 ![alt text](https://github.com/bardetad/atiamML/blob/master/code/data/images/PCAExample/PCA_beta1_WU100.png?raw=true "PCA_warmup")
 > A PCA from the same VAE. It represents labeled inputs a latent space plane (the more expressive). Blue points correspond to low harmonics richness spectra while yellow correspond to high. 
 
-
+#### Example
 
 ```{r, engine='bash', count_lines}
 python mainScript.py -mode "load" -vae-path "../unitTest/dummySaveTest/dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5"
@@ -98,7 +98,7 @@ The above command load the VAE saved from the previous training on the dummy dat
 
 
 
-**NB** - the save name of the VAE after training is very heavy: `../unitTest/dummySaveTest/dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5`.\
+>**NB** - the save name of the VAE after training is very heavy: `../unitTest/dummySaveTest/dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5`.\
 But very useful as it contains all the info on VAE structure and state at the end of its training.
 
 
