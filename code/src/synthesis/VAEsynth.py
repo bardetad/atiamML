@@ -1,11 +1,21 @@
-# @pierrotechnique
-# -*- coding: utf-8 -*-
+"""VAEsynth.py
+
+Script controlling the Python side of the OSC communication bridge at the 
+heart of the real-time synthesis implementation. Loads a trained VAE model,
+then listens to OSC messages coming from the corresponding Max for Live device.
+Calls the VAE's decoder and generates magnitude and phase spectrum information
+before sending the results back to Max for sound synthesis.
+
+Further use details: README.md
+"""
 
 import OSC
 import numpy as np
 import torch
 import VAE
 import matplotlib.pyplot as plt
+
+#---Load trained VAE model---
 
 direct = '/Users/pierrotechnique/Documents/School/UPMC/M2ATIAM/Informatique'
 direct += '/MML/Projet/atiamML/data/trained/'
@@ -17,19 +27,14 @@ miniBatchSize = ampVAE.mb_size
 zDim = ampVAE.decoder.dimZ
 z = np.zeros((1,zDim),dtype='float32')
 i = 0
-# ---If phase comes from a separately trained VAE:---
 
-#pTrain = 'Nwu1/pierrotechniquePhase23700_NPZ_E<1024-relu6-512-muSig-3>_D<3-'
-#pTrain += 'relu6-512-muSig-1024>_beta1_mb100_lr0dot001_ep128'
-#phaseVAE = VAE.loadVAE(pTrain,direct)
-# ---Loading from dataset---
-#setData = np.load('../data/pierrotechniqueAmpPhase23700.npz')
-#setData = setData['spectra']
-#setDim = setData.shape[1]
-#phaseData = np.load('../data/pierrotechniquePhase23700.npz')
-#phaseData = phaseData['spectra']
+#---------------------------------------
 
-def griffLim(S): # Griffin-Lim algorithm for signal reconstruction
+def griffLim(S):
+    """Griffin-Lim algorithm for signal reconstruction.  
+    Args:
+        S (ndarray): input magnitude spectrum
+    """
     Nfft = S.shape[0]
     S = np.log1p(S) # ln(1 + S)
     a = np.exp(S) - 1
@@ -40,12 +45,18 @@ def griffLim(S): # Griffin-Lim algorithm for signal reconstruction
         p = np.angle(np.fft.fft(x,Nfft))
     return (p + np.pi)/(2*np.pi) # Rescaled between 0. and 1. for Max
 
+#---Initialize and connect OSC server and client---
 
 inOSC = OSC.OSCServer(('127.0.0.1',7000))
 outOSC = OSC.OSCClient()
 outOSC.connect(('127.0.0.1',9004)) # Match port number to Max out
 
+#---------------------------------------
+
 def cntrlHandler(addr,tags,data,client_address):
+    """Handler function called for incoming OSC messages.
+    Args: local arguments used by the OSC server class.
+    """
     global i
     zAx = data[0]
     zVal = data[1]
@@ -53,8 +64,8 @@ def cntrlHandler(addr,tags,data,client_address):
     if (zAx < zDim):
         z[0,zAx] = zVal
         ampVAE.decode(torch.autograd.Variable(torch.from_numpy(z)))
-#        X = ampVAE.X_mu.data.numpy()[0] # Gaussian
-        X = ampVAE.X_sample.data.numpy()[0] # Bernoulli
+#        X = ampVAE.X_mu.data.numpy()[0] # If Gaussian VAE
+        X = ampVAE.X_sample.data.numpy()[0] # If Bernoulli VAE
         # ---If VAE was trained in dB:---
 #        X = X/max(abs(X)) # Normalize
 #        X = 10**X # Convert
@@ -62,11 +73,6 @@ def cntrlHandler(addr,tags,data,client_address):
         # ---If no phase information is available:---
 #        X = X/max(abs(X)) # Normalize
 #        p = griffLim(X) # Griffin-Lim phase approximation
-        # ---If phase comes from a separately trained VAE:---
-#        X = X/max(abs(X)) # Normalize amplitude
-#        phaseVAE.decode(torch.autograd.Variable(torch.from_numpy(z)))
-#        p = phaseVAE.X_mu.data.numpy()[0]
-#        p = (p/(2*max(abs(p)))) + 0.5 # Rescaled between 0. and 1. for Max
         # ---If phase was trained concatenated to amplitude:---
         p = X[1024:2048]
 #        p *= 2*np.pi
@@ -74,12 +80,6 @@ def cntrlHandler(addr,tags,data,client_address):
 #        p = (p/(max(abs(p)))) # Rescaled between 0. and 1. for Max
         X = X[0:1024]
         X = X/max(abs(X))
-#        X = X/max(abs(X)) # Normalize amplitude
-        # ---If loading from dataset---
-#        k = int(0.5*(zVal+1.)*(setDim-1))
-#        X = setData[0:1024,k]
-#        p = setData[1024:2048,k]
-#        p = (p/(2*max(abs(p)))) + 0.5 # Rescaled between 0. and 1. for Max
         # ---If using ifft/istft algorithm---
 #        p *= 2*np.pi
 #        p -= np.pi
@@ -116,6 +116,8 @@ def cntrlHandler(addr,tags,data,client_address):
         clr.setAddress('/clr')
         clr.append(1)
         outOSC.send(clr)
+
+#---Add handler function to server and start serving---
 
 inOSC.addMsgHandler('/cntrl',cntrlHandler)
 inOSC.serve_forever()
