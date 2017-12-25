@@ -15,21 +15,29 @@ Once the VAE is trained, `Visualize/` folder gives tools and functions to visual
 >* **DatasetTest.py** tests dataset handling
 >* **VAETest.py** tests VAE train, save, load, analyse, visualize
 
-## Warnings
+### Warnings
 Before each commit **run unit tests** in `./unitTest/` folder
 
 Name of datasets **should NOT** contain any '_' characters
 
 **mb-size** needs to be a divider of total dataset length.
 
-## Use of **mainScript.py**
+### Use of **mainScript.py**
 
 ### Help
+```{r, engine='bash', count_lines}
+cd src/
+```
+
 ```{r, engine='bash', count_lines}
 python mainScript.py --help
 ```
 
-### 1. Training
+## 1. Training
+
+```{r, engine='bash', count_lines}
+cd src/
+```
 
 #### Immediate test
 To train a VAE  on a dummy dataset of filepath `../data/dummyDataset98.npz`. It's composed of 100 spectra of length 1024. 
@@ -69,7 +77,7 @@ python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -enco
 ```
 
 
-### 2. Loading VAE, visualization & sampling latent space
+## 2. Loading VAE, view & generation
 
 Instead of using the default mode **"train"** in command, use the mode **"load"** with flag. This mode enables to use trained VAE and do some stuff with it (e.g. PCA, t-sne, generation ...).
 ```{r, engine='bash', count_lines}
@@ -87,7 +95,7 @@ It corresponds to 200 stacked spectra (of size 1024). Hence, x axis corresponds 
 Plots are not in **mainScript.py** but they are easy to add. For more details see class "TestVAEVisualize" in **VAETests.py** in `src/unitTest/`
 
 ![alt text](https://github.com/bardetad/atiamML/blob/master/code/data/images/PCAExample/PCA_beta1_WU100.png?raw=true "PCA_warmup")
-> A PCA from the same VAE. It represents labeled inputs a latent space plane (the more expressive). Blue points correspond to low harmonics richness spectra while yellow correspond to high. 
+> A PCA from the same VAE. It represents labeled inputs encoded in a latent space plane (the more expressive). Blue points correspond to low harmonics richness spectra while yellow correspond to high. 
 
 #### Example
 
@@ -101,9 +109,20 @@ The above command load the VAE saved from the previous training on the dummy dat
 >**NB** - the save name of the VAE after training is very heavy: `../unitTest/dummySaveTest/dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5`.\
 But very useful as it contains all the info on VAE structure and state at the end of its training.
 
+## 3. Realtime synthesis
 
+```{r, engine='bash', count_lines}
+cd synthesis/
+```
 
-### 3. Unit Testing
+1. Load **VAEsynth.amxd** on a Live MIDI track set to monitor in with your favourite MIDI controller connected and sending raw MIDI data to the chosen track (i.e. no control surface scripts active).\
+Hit the little "Open in editor" button to see the Max for Live patch in its entirety. Toggle to choose the synthesis algorithm to use (oscillator bank or inverse short-term Fourier transform) and adjust the MIDI CC numbers used to set the latent variable to match your controller setup.
+
+2. Open **VAEsynth.py** and set the path to the trained VAE model to load, then comment/uncomment the appropriate sections according to the various available options (algorithm choice, VAE model details, etc.).
+3. Make sure the Python script’s output OSC client port and Max patch’s input OSC server port numbers match, then run the Python script. If nothing happens on MIDI input, change said port number and relaunch the script (requires restarting the Python kernel).
+4. Play around with the latent variable controls and have fun exploring the VAE’s sonic latent space!
+
+## 4. Unit Testing
 ```{r, engine='bash', count_lines}
 cd unitTest/
 ```
