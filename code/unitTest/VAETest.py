@@ -389,9 +389,10 @@ class TestVAEFunctions(unittest.TestCase):
         savefile = vae.save(datasetName, saveDir)
         # reload the savefile of VAE
         vae = loadVAE(savefile, saveDir)
+
         # continue training
-        vae.trainVAE(train_loader, 10)
-        vae.save(datasetName, datasetDir)
+        # vae.trainVAE(train_loader, 10)
+        # vae.save(datasetName, datasetDir)
         self.assertTrue(vae.created and vae.loaded and vae.saved)
 
     def test_VAE_load(self):
@@ -425,8 +426,7 @@ class TestVAEVisualize(unittest.TestCase):
 
     def test_VAE_PCA(self):
         # try to load a vae
-        vaeLoaded = loadVAE('dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>\
-                            _D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5',
+        vaeLoaded = loadVAE('dummyDataset98_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta1_mb49_lr0dot001_ep5',
                             './dummySaveTest/')
         test = numpy.load("./dummyDataset/dummyDataset98.npz")
         # vaeLoaded = loadVAE('toy-spectral-richness-v2-lin_NPZ_E<1024-relu6-600-muSig-10>_D<10-relu6-600-muSig-1024>_beta3_mb100_lr0dot001_ep400',
@@ -461,6 +461,8 @@ class TestVAEVisualize(unittest.TestCase):
         plt.show()
 
         self.assertTrue(vaeLoaded.loaded)
+
+#---------------------------- End class TestVAEVisualize ------------------
 
 #---------------------------- Test suites ------------------------------------
 

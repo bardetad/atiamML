@@ -71,7 +71,7 @@ python mainScript.py -encoderIOdims 1024 600 10 -decoderIOdims 10 600 1024 -enco
 
 ### 2. Loading VAE, visualization & sampling latent space
 
-Instead of using the default mode **"train"** in command, use the mode **"load"** with flag. This mode enables to use trained VAE and do some stuffs with it (e.g. PCA, t-sne, generation ...).
+Instead of using the default mode **"train"** in command, use the mode **"load"** with flag. This mode enables to use trained VAE and do some stuff with it (e.g. PCA, t-sne, generation ...).
 ```{r, engine='bash', count_lines}
 -mode "load"
 ```
