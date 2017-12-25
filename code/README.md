@@ -1,22 +1,30 @@
 # Code Documentation
+
+## Files & folders
 `src/` contains all Modules to create, train, save, load, visualize **Variational autoencoder** (VAE) with the wanted dataset.
 
-   > mainScript.py is the script used either to train a VAE with a `.npz` dataset (see README.md in `../toy`) or load an already trained VAE and do some things like reconstruction analysis, latent space visualization, generation...\
-Creation, training, saving and loading are handled by VAE.py and EncoderDecoder.py.\
-ManageDataset.py in `dataset/` makes the link between the training dataset and the VAE.
+   > * **mainScript.py** is the script used either to train a VAE with a `.npz` dataset (see **README.md** in `../toy`) or load an already trained VAE and do some things like reconstruction analysis, latent space visualization, generation...\
+>* Creation, training, saving and loading are handled by **VAE.py** and **EncoderDecoder.py**.\
+>* **ManageDataset.py** in `dataset/` makes the link between the training dataset and the VAE.
 Once the VAE is trained, `Visualize/` folder gives tools and functions to visualize and analyse it.
 
 `data/` is the default folder where trained VAEs are stored\
-`unitTest/` contains helpful simple tests on VAE classes, datasets and analysis to make sure  everything is ok when changes are made in source code
 
-## **Warnings**
-##### Before each commit **run unit tests** in *`./unitTest/`* folder
-##### Name of datasets **should NOT** contain '_' characters
-##### **mb-size** needs to be a divider of total dataset length.
+`unitTest/` contains helpful simple tests on VAE classes, datasets and analysis to make sure  everything is ok when source code is changed
+>* **EncoderDecoderTest.py** tests Encoder/Decoder structure
+>* **DatasetTest.py** tests dataset handling
+>* **VAETest.py** tests VAE train, save, load, analyse, visualize
 
-## **Use of mainScript.py**
+## Warnings
+Before each commit **run unit tests** in `./unitTest/` folder
 
-### **Help**
+Name of datasets **should NOT** contain any '_' characters
+
+**mb-size** needs to be a divider of total dataset length.
+
+## Use of **mainScript.py**
+
+### Help
 ```{r, engine='bash', count_lines}
 python mainScript.py --help
 ```
