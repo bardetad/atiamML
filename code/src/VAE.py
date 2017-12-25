@@ -272,10 +272,6 @@ class VAE(nn.Module):
                          + self.decoder.bias_mu.repeat(var_h.size(0), 1))
             self.X_logSigma = (torch.mm(var_h, self.decoder.weight_logSigma)
                                + self.decoder.bias_logSigma.repeat(var_h.size(0), 1))
-            # To avoid recon loss negative value
-            # for i in range(self.decoder.dimX):
-            #     if self.X_logSigma.data[i] < -1.837877:
-            #         self.X_logSigma.data[i] = -1.837877
         else:
             print("ERROR VAE: wrong decoder type")
             raise
@@ -480,6 +476,7 @@ class VAE(nn.Module):
     #---------------------------------------
 
     def noiseInput(self, X):
+        """Noise encoder input during training"""
         return X + Variable(self.noise_gain * torch.randn(1, self.decoder.dimX))
 
     #---------------------------------------
